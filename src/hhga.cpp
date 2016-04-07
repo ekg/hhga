@@ -348,16 +348,14 @@ HHGA::HHGA(size_t window_length,
             try {
                 if (field_type == vcflib::FIELD_FLOAT
                     || field_type == vcflib::FIELD_INTEGER) {
-                    cerr << "trying num " << key << " : " << field << endl;
                     call_info_num[key] = stod(field);
                 } else if (field_type == vcflib::FIELD_BOOL
                            || field_type == vcflib::FIELD_STRING) {
-                    cerr << "trying str " << key << " : " << field << endl;
                     call_info_str[key] = field;
                 }
             } catch (...) {
                 // do nothing if the field is invalid
-                // wtf
+                // wtf -- only VCF would be impossible to get right
             }
         }
     }
@@ -588,6 +586,14 @@ const string HHGA::str(void) {
         out << " " << aln.Name;
         out << endl;
     }
+    // now handle caller input features
+    for (auto& f : call_info_num) {
+        out << f.first << ":" << f.second << " ";
+    }
+    for (auto& f : call_info_str) {
+        out << f.first << ":" << f.second << " ";
+    }
+    
     return out.str();
 }
 
