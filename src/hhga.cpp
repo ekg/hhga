@@ -646,6 +646,14 @@ const string HHGA::vw(void) {
             out << ++idx << allele.alt << ":" << allele.prob << " ";
         }
     }
+    out << "|software ";
+    // now handle caller input features
+    for (auto& f : call_info_num) {
+        out << f.first << ":" << f.second << " ";
+    }
+    for (auto& f : call_info_str) {
+        out << f.first << ":" << f.second << " ";
+    }
     return out.str();
 }
 
