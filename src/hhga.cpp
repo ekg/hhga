@@ -129,6 +129,7 @@ HHGA::HHGA(size_t window_length,
            BamTools::BamMultiReader& bam_reader,
            FastaReference& fasta_ref,
            vcflib::Variant& var,
+           const string& input_name,
            const string& class_label,
            bool show_ref) {
 
@@ -329,6 +330,39 @@ HHGA::HHGA(size_t window_length,
         }
         //cerr << gtstr << endl;
     }
+
+    // for all the info fields
+    //map<string, map<string, double> > call_info_num; // from input VCFs, numbers
+    //map<string, map<string, string> > call_info_str; // from input VCFs, strings
+    for (auto& f : var.info) {
+        // what kind of field is this?
+        auto field_name = f.first;
+        auto field_type = var.infoType(field_name);
+        auto& fields = f.second;
+        int i = 0;
+        for (auto& field : fields) {
+            ++i;
+            stringstream k;
+            k << input_name << field_name << "_" << i;
+            string key = k.str();
+            try {
+                if (field_type == vcflib::FIELD_FLOAT
+                    || field_type == vcflib::FIELD_INTEGER) {
+                    cerr << "trying num " << key << " : " << field << endl;
+                    call_info_num[key] = stod(field);
+                } else if (field_type == vcflib::FIELD_BOOL
+                           || field_type == vcflib::FIELD_STRING) {
+                    cerr << "trying str " << key << " : " << field << endl;
+                    call_info_str[key] = field;
+                }
+            } catch (...) {
+                // do nothing if the field is invalid
+                // wtf
+            }
+        }
+    }
+
+    // do the same for QUAL
 
     map<int32_t, size_t> pos_max_length;
 

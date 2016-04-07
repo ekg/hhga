@@ -11,6 +11,8 @@ void printUsage(int argc, char** argv) {
          << "    -h, --help            this dialog" << endl
          << "    -f, --fasta-reference FILE  the reference sequence" << endl
          << "    -b, --bam FILE        use this BAM as input (multiple allowed)" << endl
+         << "    -v, --vcf FILE        derive an example from every record in this file" << endl
+         << "    -n, --name NAME       apply NAME as the prefix for the annotations in --vcf" << endl
          << "    -w, --window-size N   use a fixed window of this size in the MSA matrix" << endl
          << "    -r, --region REGION   limit variants to those in this region (chr:start-end)" << endl
          << "    -t, --text-viz        make a human-readible, compact output" << endl
@@ -28,6 +30,7 @@ int main(int argc, char** argv) {
 
     vector<string> inputFilenames;
     string vcf_file_name;
+    string vcf_feature_prefix;
     string region_string;
     string fastaFile;
     string output_format = "vw";
@@ -45,6 +48,7 @@ int main(int argc, char** argv) {
             {"help", no_argument, 0, 'h'},
             {"bam",  required_argument, 0, 'b'},
             {"vcf", required_argument, 0, 'v'},
+            {"name", required_argument, 0, 'n'},
             {"region", required_argument, 0, 'r'},
             {"fasta-reference", required_argument, 0, 'f'},
             {"text-viz", no_argument, 0, 't'},
@@ -56,7 +60,7 @@ int main(int argc, char** argv) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:d",
+        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:",
                          long_options, &option_index);
 
         if (c == -1)
@@ -80,6 +84,10 @@ int main(int argc, char** argv) {
 
         case 'v':
             vcf_file_name = optarg;
+            break;
+
+        case 'n':
+            vcf_feature_prefix = optarg;
             break;
 
         case 'r':
@@ -154,6 +162,7 @@ int main(int argc, char** argv) {
                   bam_reader,
                   fasta_ref,
                   var,
+                  vcf_feature_prefix,
                   class_label);
         if (output_format == "vw") {
             cout << hhga.vw() << endl;

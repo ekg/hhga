@@ -87,6 +87,8 @@ public:
     vector<vector<allele_t> > haplotypes; // haps/genotypes
     vector<vector<allele_t> > alleles;
     vector<prob_t> mapping_qualities;
+    map<string, double> call_info_num; // from input VCFs, numbers
+    map<string, string> call_info_str; // from input VCFs, strings
 
     // helpers for construction 
     vector<allele_t> pad_alleles(vector<allele_t> aln_alleles,
@@ -100,6 +102,7 @@ public:
          BamTools::BamMultiReader& bam_reader,
          FastaReference& fasta_ref,
          vcflib::Variant& var,
+         const string& input_name,
          const string& class_label,
          bool show_ref = false);
 
