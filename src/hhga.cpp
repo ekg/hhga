@@ -131,8 +131,10 @@ HHGA::HHGA(size_t window_length,
            vcflib::Variant& var,
            const string& input_name,
            const string& class_label,
+           bool expon,
            bool show_ref) {
 
+    exponentiate = expon;
     label = class_label;
 
     // store the names of all the reference sequences in the BAM file
@@ -188,9 +190,14 @@ HHGA::HHGA(size_t window_length,
         vector<prob_t> quals;
         assert(aln.Qualities.size() == aln.QueryBases.size());
         for (string::iterator c = aln.Qualities.begin(); c != aln.Qualities.end(); ++c) {
-            quals.push_back(
-                1-phred2float(
-                    qualityChar2ShortInt(*c)));
+            if (exponentiate) {
+                quals.push_back(
+                    1-phred2float(
+                        qualityChar2ShortInt(*c)));
+            } else {
+                quals.push_back(
+                    qualityChar2ShortInt(*c));
+            }
         }
 
         string refseq = fasta_ref.getSubSequence(referenceIDToName[aln.RefID],
@@ -628,7 +635,11 @@ const string HHGA::vw(void) {
         auto name = "aln" + std::to_string(i++);
         out << "|" << name << " ";
         // handle mapping quality
-        out << "mapqual:" << 1-phred2float(min(aln.MapQuality, (uint16_t)60)) << " ";
+        if (exponentiate) {
+            out << "mapqual:" << 1-phred2float(min(aln.MapQuality, (uint16_t)60)) << " ";
+        } else {
+            out << "mapqual:" << aln.MapQuality << " ";
+        }
         // handle flags
         if (aln.IsReverseStrand())     out << "strand:1"; else out << "strand:0"; out << " ";
         if (aln.IsMateReverseStrand()) out << "ostrand:1"; else out << "ostrand:0"; out << " ";

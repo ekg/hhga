@@ -17,6 +17,7 @@ void printUsage(int argc, char** argv) {
          << "    -r, --region REGION   limit variants to those in this region (chr:start-end)" << endl
          << "    -t, --text-viz        make a human-readible, compact output" << endl
          << "    -c, --class-label X   add this label (e.g. -1 for false, 1 for true)" << endl
+         << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
          << "    -d, --debug           print useful debugging information to stderr" << endl
          << endl
          << "Generates reports on the rate of putative mutations or errors in the input alignment data." << endl
@@ -37,6 +38,7 @@ int main(int argc, char** argv) {
     string class_label;
     size_t window_size = 50;
     bool debug = false;
+    bool exponentiate = false;
 
     // parse command-line options
     int c;
@@ -54,13 +56,14 @@ int main(int argc, char** argv) {
             {"text-viz", no_argument, 0, 't'},
             {"class-label", no_argument, 0, 'c'},
             {"window-size", required_argument, 0, 'w'},
+            {"exponentiate", no_argument, 0, 'e'},
             {"debug", no_argument, 0, 'd'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:",
+        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:e",
                          long_options, &option_index);
 
         if (c == -1)
@@ -108,6 +111,10 @@ int main(int argc, char** argv) {
 
         case 'w':
             window_size = atoi(optarg);
+            break;
+
+        case 'e':
+            exponentiate = true;
             break;
 
         case 'd':
@@ -163,7 +170,8 @@ int main(int argc, char** argv) {
                   fasta_ref,
                   var,
                   vcf_feature_prefix,
-                  class_label);
+                  class_label,
+                  exponentiate);
         if (output_format == "vw") {
             cout << hhga.vw() << endl;
         } else if (output_format == "text-viz") {

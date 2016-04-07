@@ -81,6 +81,9 @@ public:
 
     // the class label for the example
     string label;
+
+    // do we express things in exponentiated or phred form
+    bool exponentiate;
     
     // the feature model
     vector<allele_t> reference;
@@ -104,6 +107,7 @@ public:
          vcflib::Variant& var,
          const string& input_name,
          const string& class_label,
+         bool expon = false,
          bool show_ref = false);
 
     const string str(void);
