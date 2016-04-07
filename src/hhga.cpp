@@ -339,8 +339,6 @@ HHGA::HHGA(size_t window_length,
     }
 
     // for all the info fields
-    //map<string, map<string, double> > call_info_num; // from input VCFs, numbers
-    //map<string, map<string, string> > call_info_str; // from input VCFs, strings
     for (auto& f : var.info) {
         // what kind of field is this?
         auto field_name = f.first;
@@ -368,6 +366,7 @@ HHGA::HHGA(size_t window_length,
     }
 
     // do the same for QUAL
+    call_info_num[input_name + "QUAL"] = var.quality;
 
     map<int32_t, size_t> pos_max_length;
 
