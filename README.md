@@ -75,6 +75,7 @@ For debugging we can pipe the hhga format output through `sed s/\|/\\n\|/g | col
     |aln8   mapqual:0.999999  strand:0  ostrand:1  dup:0  qcfail:0  fmate:0  xmate:1  ymap:1  paired:1  zprimary:1  iproper:1  1R:0.9999  2R:0.9999    3R:0.9999    4R:0.9999    5R:0.9999    6R:0.9999    7R:0.9999  8R:0.9999  9R:0.9999    10R:0.9999    11R:0.9999    12U:0.9999    13U:0.9999    14U:0.9999  15U:0.9999  16R:0.9999  17R:0.9999    18R:0.9999  19R:0.9999   20R:0.9999
     |aln9   mapqual:0.999999  strand:0  ostrand:1  dup:0  qcfail:0  fmate:0  xmate:1  ymap:1  paired:1  zprimary:1  iproper:1  1M:1       2M:1         3M:1         4M:1         5M:1         6R:0.999499  7R:0.9998  8R:0.9998  9R:0.9998    10R:0.9998    11R:0.9998    12R:0.9999    13R:0.9999    14R:0.9999  15R:0.9999  16R:0.9999  17R:0.9999    18R:0.9999  19R:0.9999   20R:0.9999
     |aln10  mapqual:0.999999  strand:1  ostrand:0  dup:0  qcfail:0  fmate:1  xmate:0  ymap:1  paired:1  zprimary:1  iproper:1  1M:1       2M:1         3M:1         4M:1         5M:1         6M:1         7M:1       8M:1       9M:1         10M:1         11M:1         12M:1         13M:1         14M:1       15M:1       16M:1       17M:1         18R:0.9998  19R:0.9998   20R:0.9998
+    |software freebayesLength: 0.9 
     
 ```
 
@@ -131,8 +132,6 @@ The `hhga` executable is at `bin/hhga`.
 - find how to express challenge objectives as vw parametrization
 - 
 
-### Options to add
--- representation that chops off half of it that is redundant under 
 
 
 ## FDA Challenge objectives
