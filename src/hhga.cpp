@@ -662,7 +662,7 @@ const string HHGA::vw(void) {
         out << f.first << ":" << f.second << " ";
     }
     for (auto& f : call_info_str) {
-        out << f.first << ":" << f.second << " ";
+        out << f.first << "_" << f.second << " ";
     }
     return out.str();
 }
