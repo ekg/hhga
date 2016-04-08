@@ -661,9 +661,11 @@ const string HHGA::vw(void) {
     for (auto& f : call_info_num) {
         out << f.first << ":" << f.second << " ";
     }
+    /*
     for (auto& f : call_info_str) {
         out << f.first << "_" << f.second << " ";
     }
+    */
     return out.str();
 }
 
