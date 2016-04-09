@@ -259,7 +259,13 @@ HHGA::HHGA(size_t window_length,
             sp += len;
             break;
             case 'S':
-                // we throw soft clips away
+                // position is -1 if at the beginning
+                // or +1 if at the end
+                if (cigarIter == aln.CigarData.begin()) {
+                    aln_alleles.push_back(allele_t("", "S", rp + i + aln.Position-2, len));
+                } else {
+                    aln_alleles.push_back(allele_t("", "S", rp + i + aln.Position+2, len));
+                }
                 sp += len;
                 break;
             case 'H':
