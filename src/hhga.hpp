@@ -108,7 +108,8 @@ public:
          const string& input_name,
          const string& class_label,
          bool expon = false,
-         bool show_ref = false);
+         bool show_ref = false,
+         bool assume_ref = true);
 
     const string str(void);
     const string vw(void);

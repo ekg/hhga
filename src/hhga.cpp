@@ -132,7 +132,8 @@ HHGA::HHGA(size_t window_length,
            const string& input_name,
            const string& class_label,
            bool expon,
-           bool show_ref) {
+           bool show_ref,
+           bool assume_ref) { // assumes the haplotypes are ref everywhere
 
     exponentiate = expon;
     label = class_label;
@@ -464,8 +465,18 @@ HHGA::HHGA(size_t window_length,
         for (auto a = alignment_alleles.begin(); a != alignment_alleles.end(); ++a) {
             flatten_to_ref(a->second);
         }
-        for (auto& hap : haplotypes) {
-            flatten_to_ref(hap);
+        if (assume_ref) {
+            // replace that empty allele with ref allele at same position
+            for (auto& hap : haplotypes) {
+                size_t i = 0;
+                for (vector<allele_t>::iterator a = hap.begin(); a != hap.end(); ++a, ++i) {
+                    if (a->alt == "M") *a = reference[i];
+                }
+            }
+        } else {
+            for (auto& hap : haplotypes) {
+                flatten_to_ref(hap);
+            }
         }
     }
 
