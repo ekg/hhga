@@ -132,7 +132,7 @@ HHGA::HHGA(size_t window_length,
            const string& input_name,
            const string& class_label,
            bool expon,
-           bool show_ref,
+           bool show_bases,
            bool assume_ref) { // assumes the haplotypes are ref everywhere
 
     exponentiate = expon;
@@ -467,7 +467,7 @@ HHGA::HHGA(size_t window_length,
     }
 
     // optionally force the reference matching alleles to be R
-    if (!show_ref) {
+    if (!show_bases) {
         for (auto a = alignment_alleles.begin(); a != alignment_alleles.end(); ++a) {
             flatten_to_ref(a->second);
         }

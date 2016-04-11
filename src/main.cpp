@@ -18,6 +18,7 @@ void printUsage(int argc, char** argv) {
          << "    -t, --text-viz        make a human-readible, compact output" << endl
          << "    -c, --class-label X   add this label (e.g. -1 for false, 1 for true)" << endl
          << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
+         << "    -s, --show-bases      show all the bases in the alignments instead of R ref match symbol" << endl
          << "    -d, --debug           print useful debugging information to stderr" << endl
          << endl
          << "Generates reports on the rate of putative mutations or errors in the input alignment data." << endl
@@ -39,6 +40,8 @@ int main(int argc, char** argv) {
     size_t window_size = 50;
     bool debug = false;
     bool exponentiate = false;
+    bool show_bases = false;
+    bool assume_ref = true; // assume haps are ref when not given
 
     // parse command-line options
     int c;
@@ -57,13 +60,14 @@ int main(int argc, char** argv) {
             {"class-label", no_argument, 0, 'c'},
             {"window-size", required_argument, 0, 'w'},
             {"exponentiate", no_argument, 0, 'e'},
+            {"show-bases", no_argument, 0, 's'},
             {"debug", no_argument, 0, 'd'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:e",
+        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:es",
                          long_options, &option_index);
 
         if (c == -1)
@@ -115,6 +119,10 @@ int main(int argc, char** argv) {
 
         case 'e':
             exponentiate = true;
+            break;
+
+        case 's':
+            show_bases = true;
             break;
 
         case 'd':
@@ -171,7 +179,9 @@ int main(int argc, char** argv) {
                   var,
                   vcf_feature_prefix,
                   class_label,
-                  exponentiate);
+                  exponentiate,
+                  show_bases,
+                  assume_ref);
         if (output_format == "vw") {
             cout << hhga.vw() << endl;
         } else if (output_format == "text-viz") {
