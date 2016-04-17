@@ -67,6 +67,12 @@ void set_region(vcflib::VariantCallFile& vcffile, const string& region_str);
 vector<prob_t> deletion_probs(const vector<prob_t>& quals, size_t sp, size_t l);
 vector<prob_t> insertion_probs(const vector<prob_t>& quals, size_t sp, size_t l);
 
+std::vector<std::string> &split_delims(const std::string &s,
+                                       const std::string& delims,
+                                       std::vector<std::string> &elems);
+std::vector<std::string> split_delims(const std::string &s,
+                                      const std::string& delims);
+
 class HHGA {
 public:
     string chrom_name;

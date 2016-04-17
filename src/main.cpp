@@ -19,10 +19,11 @@ void printUsage(int argc, char** argv) {
          << "    -c, --class-label X   add this label (e.g. -1 for false, 1 for true)" << endl
          << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
          << "    -s, --show-bases      show all the bases in the alignments instead of R ref match symbol" << endl
+         << "    -p, --predictions-in  stream in predictions and output an annotated VCF" << endl
          << "    -d, --debug           print useful debugging information to stderr" << endl
          << endl
-         << "Generates reports on the rate of putative mutations or errors in the input alignment data." << endl
-         << "Alignments are read from the specified files, or stdin if none are specified" << endl
+         << "Generates examples for vw using a VCF file and BAM file." << endl
+         << "May optionally convert vw predictions into an annotated VCF file for downstream integration." << endl
          << endl
          << "authors: Erik Garrison <erik.garrison@gmail.com> and Nicolás Della Penna <nikete@gmail.com>" << endl;
 
@@ -42,6 +43,7 @@ int main(int argc, char** argv) {
     bool exponentiate = false;
     bool show_bases = false;
     bool assume_ref = true; // assume haps are ref when not given
+    bool predictions_in = false;
 
     // parse command-line options
     int c;
@@ -61,13 +63,14 @@ int main(int argc, char** argv) {
             {"window-size", required_argument, 0, 'w'},
             {"exponentiate", no_argument, 0, 'e'},
             {"show-bases", no_argument, 0, 's'},
+            {"predictions-in", no_argument, 0, 'p'},
             {"debug", no_argument, 0, 'd'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:es",
+        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:esp",
                          long_options, &option_index);
 
         if (c == -1)
@@ -125,6 +128,10 @@ int main(int argc, char** argv) {
             show_bases = true;
             break;
 
+        case 'p':
+            predictions_in = true;
+            break;
+
         case 'd':
             debug = true;
             break;
@@ -135,6 +142,48 @@ int main(int argc, char** argv) {
         }
     }
 
+    if (predictions_in) {
+
+        stringstream headerss;
+        headerss 
+            << "##fileformat=VCFv4.3" << endl
+            << "##source=hhga" << endl
+            << "##INFO=<ID=prediction,Number=1,Type=Integer,Description=\"hhga+vw prediction for site\">" << endl
+            << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO";
+        vcflib::VariantCallFile vcf_file;
+        string header = headerss.str();
+        vcf_file.openForOutput(header);
+        cout << vcf_file.header << endl;
+        
+        // stream in predictions, use the annotation we apply to the vw input
+        // to reconstruct a VCF file with our model's predictions as an INFO field
+        for (std::string line; std::getline(std::cin, line); ) {
+            auto fields = split_delims(line, " \t");
+            // we want the second field
+            auto& prediction = fields[0];
+            auto comment = fields[1];
+            // strip off the leading '
+            comment = comment.substr(1);
+            auto vcf_fields = split_delims(comment, "_");
+            auto& seqname = vcf_fields[0];
+            auto pos = stol(vcf_fields[1].c_str());
+            auto& ref = vcf_fields[2];
+            auto& alt = vcf_fields[3];
+
+            vcflib::Variant var(vcf_file);
+            var.sequenceName = seqname;
+            var.position = pos;
+            var.quality = 0;
+            var.ref = ref;
+            var.alt.push_back(alt);
+            var.id = ".";
+            var.filter = ".";
+            var.info["prediction"].push_back(convert(prediction));
+            cout << var << endl;
+        }
+        return 0;
+    }
+    
     if (fastaFile.empty()) {
         cerr << "no FASTA reference specified" << endl;
         printUsage(argc, argv);
