@@ -162,8 +162,10 @@ int main(int argc, char** argv) {
             // we want the second field
             auto& prediction = fields[0];
             auto comment = fields[1];
-            // strip off the leading '
-            comment = comment.substr(1);
+            // strip off the leading ' if present
+            if (comment.find("'") != string::npos) {
+                comment = comment.substr(1);
+            }
             auto vcf_fields = split_delims(comment, "_");
             auto& seqname = vcf_fields[0];
             auto pos = stol(vcf_fields[1].c_str());
