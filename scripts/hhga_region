@@ -26,7 +26,6 @@ callable_variants=$output_dir/$region.ground_callable.vcf.gz
 uncallable_variants=$output_dir/$region.ground_uncallable.vcf.gz
 passing_variants=$output_dir/$region.ground_pass.vcf.gz
 failing_variants=$output_dir/$region.ground_fail.vcf.gz
-hhga_genotypes=$output_dir/$region.hhga.gz
 
 tabix -h $ground_truth $region \
     | vcfintersect -b <(zcat $ground_callable) \
