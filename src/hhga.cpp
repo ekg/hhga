@@ -160,7 +160,7 @@ string label_for_genotype(const string& gt) {
     } else if (gt == "2/2") {
         return "6";
     } else {
-        cerr << "warning: unknown genotype '" << gt << "'" << endl;
+        //cerr << "warning: unknown genotype '" << gt << "'" << endl;
         return "7";
     }
 }
@@ -179,7 +179,7 @@ string genotype_for_label(const string& gt) {
     } else if (gt == "6") {
         return "2/2";
     } else {
-        cerr << "warning: unknown genotype '" << gt << "'" << " expected one of 0/0, 0/1, 0/2, 1/1, 1/2, 2/2" << endl;
+        //cerr << "warning: unknown genotype '" << gt << "'" << " expected one of 0/0, 0/1, 0/2, 1/1, 1/2, 2/2" << endl;
         return "./.";
     }
 }
