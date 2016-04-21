@@ -1,0 +1,63 @@
+#!/bin/bash
+
+if [ $# -ne 8 ];
+then
+echo usage: $0 '[region] [window] [ref] [truth] [targets] [bam] [vcf] [output]'
+echo generates hhga data for this region in the current directory
+exit
+fi
+
+region=$1
+window_size=$2
+ref=$3
+ground_truth=$4
+ground_callable=$5
+input_bam=$6
+vcf=$7
+output_dir=$8
+
+mkdir -p $output_dir
+
+variant_calls=$vcf
+
+#region_bam=$output_dir/$region.bam
+ground_region=$output_dir/$region.ground_truth.vcf.gz
+normalized_variants=$output_dir/$region.norm.vcf.gz
+callable_variants=$output_dir/$region.ground_callable.vcf.gz
+uncallable_variants=$output_dir/$region.ground_uncallable.vcf.gz
+passing_variants=$output_dir/$region.ground_pass.vcf.gz
+failing_variants=$output_dir/$region.ground_fail.vcf.gz
+hhga_truthiness=$output_dir/$region.truthiness.hhga.gz
+
+#echo realigning region
+#samtools view -b $input_bam $region >$region_bam
+#samtools index $region_bam
+
+echo getting ground region
+tabix -h $ground_truth $region | bgziptabix $ground_region
+
+echo making normalized variants
+(
+  tabix -h $variant_calls $region | vcffilter -f 'AC > 0' | vcfallelicprimitives -kg | vt normalize -r $ref -q -
+  tabix -h $variant_calls $region | vcffilter -f 'AC = 0' | vcffilter -f 'NUMALT = 1' | sed 's%0/0%0/1%' | vcfallelicprimitives -kg | vt normalize -r $ref -q -  | grep -v '^#') | vcfstreamsort -w 100000 | bgziptabix $normalized_variants
+
+echo intersecting with callable
+bedtools intersect -header -a $normalized_variants -b $ground_callable | bgziptabix $callable_variants
+bedtools intersect -header -v -a $normalized_variants -b $ground_callable | bgziptabix $uncallable_variants
+
+echo intersecting with ground
+vcfintersect -r $ref -i $ground_region $callable_variants | bgziptabix $passing_variants
+vcfintersect -v -r $ref -i $ground_region $callable_variants | bgziptabix $failing_variants
+
+echo generating truthiness hhga
+
+( hhga -f $ref -r $region -b $input_bam -v $passing_variants -w $window_size -c 1
+  hhga -f $ref -r $region -b $input_bam -v $failing_variants -w $window_size -c -1
+) | gzip >$hhga_truthiness
+
+#rm -f $ground_region*
+#rm -f $normalized_variants*
+##rm -f $callable_variants*
+#rm -f $uncallable_variants*
+#rm -f $passing_variants*
+#rm -f $failing_variants*
