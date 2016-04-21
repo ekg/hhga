@@ -21,6 +21,7 @@ void printUsage(int argc, char** argv) {
          << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
          << "    -s, --show-bases      show all the bases in the alignments instead of R ref match symbol" << endl
          << "    -p, --predictions-in  stream in predictions and output an annotated VCF" << endl
+         << "    -N, --sample NAME     name of the sample in the output VCF (use with --gt-class)" << endl
          << "    -d, --debug           print useful debugging information to stderr" << endl
          << endl
          << "Generates examples for vw using a VCF file and BAM file." << endl
@@ -46,6 +47,7 @@ int main(int argc, char** argv) {
     bool assume_ref = true; // assume haps are ref when not given
     bool predictions_in = false;
     bool gt_class = false;
+    string sample_name;
 
     // parse command-line options
     int c;
@@ -67,13 +69,14 @@ int main(int argc, char** argv) {
             {"exponentiate", no_argument, 0, 'e'},
             {"show-bases", no_argument, 0, 's'},
             {"predictions-in", no_argument, 0, 'p'},
+            {"sample-name", required_argument, 0, 'S'},
             {"debug", no_argument, 0, 'd'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg",
+        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espgS:",
                          long_options, &option_index);
 
         if (c == -1)
@@ -139,6 +142,10 @@ int main(int argc, char** argv) {
             predictions_in = true;
             break;
 
+        case 'S':
+            sample_name = optarg;
+            break;
+
         case 'd':
             debug = true;
             break;
@@ -152,15 +159,21 @@ int main(int argc, char** argv) {
     if (predictions_in) {
 
         stringstream headerss;
+        if (sample_name.empty()) sample_name = "unknown";
         headerss 
             << "##fileformat=VCFv4.3" << endl
             << "##source=hhga" << endl
             << "##INFO=<ID=prediction,Number=1,Type=Integer,Description=\"hhga+vw prediction for site\">" << endl
-            << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO";
+            << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" << endl
+            << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t";
+        headerss << sample_name;
         vcflib::VariantCallFile vcf_file;
         string header = headerss.str();
         vcf_file.openForOutput(header);
+        // add sample
+        //vcf_file.sampleNames.push_back(sample_name);
         cout << vcf_file.header << endl;
+        
         
         // stream in predictions, use the annotation we apply to the vw input
         // to reconstruct a VCF file with our model's predictions as an INFO field
@@ -188,6 +201,11 @@ int main(int argc, char** argv) {
             var.id = ".";
             var.filter = ".";
             var.info["prediction"].push_back(convert(prediction));
+            if (gt_class) {
+                var.samples[sample_name]["GT"].clear();
+                var.samples[sample_name]["GT"].push_back(genotype_for_label(prediction));
+                var.format.push_back("GT");
+            }
             cout << var << endl;
         }
         return 0;
