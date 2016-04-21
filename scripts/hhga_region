@@ -22,17 +22,25 @@ variant_calls=$vcf
 
 ground_region=$output_dir/$region.ground_truth.vcf.gz
 normalized_variants=$output_dir/$region.norm.vcf.gz
-callable_variants=$output_dir/$region.ground_callable.vcf.gz
-uncallable_variants=$output_dir/$region.ground_uncallable.vcf.gz
-passing_variants=$output_dir/$region.ground_pass.vcf.gz
-failing_variants=$output_dir/$region.ground_fail.vcf.gz
+callable_variants=$output_dir/$region.callable.vcf.gz
+uncallable_variants=$output_dir/$region.uncallable.vcf.gz
+passing_variants=$output_dir/$region.pass.vcf.gz
+labeled_variants=$output_dir/$region.label.vcf.gz
 hhga_genotypes=$output_dir/$region.hhga.gz
 
 tabix -h $ground_truth $region \
     | vcfintersect -b <(zcat $ground_callable) \
+    | vcfallelicprimitives \
+    | vt normalize -r $ref -q - 2>/dev/null \
+    | vcffixup - \
+    | vcffilter -f 'AC > 0' \
+    | vcfunphase - \
+    | vcfnull2ref - \
     | bgziptabix $ground_region
 
 tabix -h $variant_calls $region \
+    | vcfallelicprimitives -kg \
+    | vt normalize -r $ref -q - 2>/dev/null \
     | vcfunphase - \
     | vcfnull2ref - \
     | vcfstreamsort -w 100000 | bgziptabix $normalized_variants
@@ -40,9 +48,14 @@ tabix -h $variant_calls $region \
 vcfintersect -b <(zcat $ground_callable) $normalized_variants | bgziptabix $callable_variants
 vcfintersect -v -b <(zcat $ground_callable) $normalized_variants | bgziptabix $uncallable_variants
 
-vcfintersect -r $ref -i $ground_region $callable_variants \
+#zcat $callable_variants \
+#    | vcfannotategenotypes groundGT - $ground_region \
+#    | vcfunphase - \
+#    | vcfnull2ref - \
+#    | bgziptabix $labeled_variants
+
+zcat $callable_variants \
     | vcfannotategenotypes GT - $ground_region \
-    | vcfannotategenotypes ground - $ground_region \
     | vcfunphase - \
     | vcfnull2ref - \
     | bgziptabix $passing_variants
@@ -55,5 +68,4 @@ rm -f $normalized_variants*
 rm -f $callable_variants*
 rm -f $uncallable_variants*
 rm -f $passing_variants*
-rm -f $failing_variants*
 
