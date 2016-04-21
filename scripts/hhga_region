@@ -26,6 +26,7 @@ callable_variants=$output_dir/$region.ground_callable.vcf.gz
 uncallable_variants=$output_dir/$region.ground_uncallable.vcf.gz
 passing_variants=$output_dir/$region.ground_pass.vcf.gz
 failing_variants=$output_dir/$region.ground_fail.vcf.gz
+hhga_genotypes=$output_dir/$region.hhga.gz
 
 tabix -h $ground_truth $region \
     | vcfintersect -b <(zcat $ground_callable) \
@@ -46,7 +47,8 @@ vcfintersect -r $ref -i $ground_region $callable_variants \
     | vcfnull2ref - \
     | bgziptabix $passing_variants
 
-hhga -f $ref -r $region -b $input_bam -v $passing_variants -w $window_size -g
+hhga -f $ref -r $region -b $input_bam -v $passing_variants -w $window_size -g \
+    | gzip >$hhga_genotypes
 
 rm -f $ground_region*
 rm -f $normalized_variants*
