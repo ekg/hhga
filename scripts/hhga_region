@@ -20,7 +20,6 @@ mkdir -p $output_dir
 
 variant_calls=$vcf
 
-#region_bam=$output_dir/$region.bam
 ground_region=$output_dir/$region.ground_truth.vcf.gz
 normalized_variants=$output_dir/$region.norm.vcf.gz
 callable_variants=$output_dir/$region.ground_callable.vcf.gz
@@ -29,26 +28,18 @@ passing_variants=$output_dir/$region.ground_pass.vcf.gz
 failing_variants=$output_dir/$region.ground_fail.vcf.gz
 hhga_genotypes=$output_dir/$region.hhga.gz
 
-#echo realigning region
-#samtools view -b $input_bam $region >$region_bam
-#samtools index $region_bam
-
-echo getting ground region
 tabix -h $ground_truth $region \
     | vcfintersect -b <(zcat $ground_callable) \
     | bgziptabix $ground_region
 
-echo making normalized variants
 tabix -h $variant_calls $region \
     | vcfunphase - \
     | vcfnull2ref - \
     | vcfstreamsort -w 100000 | bgziptabix $normalized_variants
 
-echo intersecting with callable
 vcfintersect -b <(zcat $ground_callable) $normalized_variants | bgziptabix $callable_variants
 vcfintersect -v -b <(zcat $ground_callable) $normalized_variants | bgziptabix $uncallable_variants
 
-echo intersecting with ground
 vcfintersect -r $ref -i $ground_region $callable_variants \
     | vcfannotategenotypes GT - $ground_region \
     | vcfannotategenotypes ground - $ground_region \
@@ -56,10 +47,7 @@ vcfintersect -r $ref -i $ground_region $callable_variants \
     | vcfnull2ref - \
     | bgziptabix $passing_variants
 
-echo generating hhga output
-
-hhga -f $ref -r $region -b $input_bam -v $passing_variants -w $window_size -g \
-    | gzip >$hhga_genotypes
+hhga -f $ref -r $region -b $input_bam -v $passing_variants -w $window_size -g
 
 rm -f $ground_region*
 rm -f $normalized_variants*
@@ -67,3 +55,4 @@ rm -f $callable_variants*
 rm -f $uncallable_variants*
 rm -f $passing_variants*
 rm -f $failing_variants*
+
