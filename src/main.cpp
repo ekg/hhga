@@ -17,6 +17,7 @@ void printUsage(int argc, char** argv) {
          << "    -r, --region REGION   limit variants to those in this region (chr:start-end)" << endl
          << "    -t, --text-viz        make a human-readible, compact output" << endl
          << "    -c, --class-label X   add this label (e.g. -1 for false, 1 for true)" << endl
+         << "    -g, --gt-class        use the GT field for the sample to make diploid genotype class labels" << endl
          << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
          << "    -s, --show-bases      show all the bases in the alignments instead of R ref match symbol" << endl
          << "    -p, --predictions-in  stream in predictions and output an annotated VCF" << endl
@@ -44,6 +45,7 @@ int main(int argc, char** argv) {
     bool show_bases = false;
     bool assume_ref = true; // assume haps are ref when not given
     bool predictions_in = false;
+    bool gt_class = false;
 
     // parse command-line options
     int c;
@@ -60,6 +62,7 @@ int main(int argc, char** argv) {
             {"fasta-reference", required_argument, 0, 'f'},
             {"text-viz", no_argument, 0, 't'},
             {"class-label", no_argument, 0, 'c'},
+            {"gt-class", no_argument, 0, 'g'},
             {"window-size", required_argument, 0, 'w'},
             {"exponentiate", no_argument, 0, 'e'},
             {"show-bases", no_argument, 0, 's'},
@@ -70,7 +73,7 @@ int main(int argc, char** argv) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:esp",
+        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg",
                          long_options, &option_index);
 
         if (c == -1)
@@ -114,6 +117,10 @@ int main(int argc, char** argv) {
 
         case 'c':
             class_label = optarg;
+            break;
+
+        case 'g':
+            gt_class = true;
             break;
 
         case 'w':
@@ -230,6 +237,7 @@ int main(int argc, char** argv) {
                   var,
                   vcf_feature_prefix,
                   class_label,
+                  gt_class,
                   exponentiate,
                   show_bases,
                   assume_ref);

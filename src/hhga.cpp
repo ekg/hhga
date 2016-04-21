@@ -146,6 +146,43 @@ void set_region(vcflib::VariantCallFile& vcffile, const string& region_str) {
     }
 }
 
+string label_for_genotype(const string& gt) {
+    if        (gt == "0/0") {
+        return "1";
+    } else if (gt == "0/1") {
+        return "2";
+    } else if (gt == "0/2") {
+        return "3";
+    } else if (gt == "1/1") {
+        return "4";
+    } else if (gt == "1/2") {
+        return "5";
+    } else if (gt == "2/2") {
+        return "6";
+    } else {
+        cerr << "warning: unknown genotype '" << gt << "'" << endl;
+        return "7";
+    }
+}
+
+string genotype_for_label(const string& gt) {
+    if        (gt == "1") {
+        return "0/0";
+    } else if (gt == "2") {
+        return "0/1";
+    } else if (gt == "3") {
+        return "0/2";
+    } else if (gt == "4") {
+        return "1/1";
+    } else if (gt == "5") {
+        return "1/2";
+    } else if (gt == "6") {
+        return "2/2";
+    } else {
+        cerr << "warning: unknown genotype '" << gt << "'" << " expected one of 0/0, 0/1, 0/2, 1/1, 1/2, 2/2" << endl;
+        return "./.";
+    }
+}
 
 HHGA::HHGA(size_t window_length,
            BamTools::BamMultiReader& bam_reader,
@@ -153,12 +190,22 @@ HHGA::HHGA(size_t window_length,
            vcflib::Variant& var,
            const string& input_name,
            const string& class_label,
+           bool gt_class,
            bool expon,
            bool show_bases,
            bool assume_ref) { // assumes the haplotypes are ref everywhere
 
     exponentiate = expon;
-    label = class_label;
+
+    if (gt_class) {
+        // convert the genotype into
+        // require that it be in
+        // 0/0, 0/1, 1/1, 0/2, 1/2, 2/2
+        auto gt = var.samples[var.sampleNames.front()]["GT"].front();
+        label = label_for_genotype(gt);
+    } else {
+        label = class_label;
+    }
 
     // store the names of all the reference sequences in the BAM file
     map<int, string> referenceIDToName;

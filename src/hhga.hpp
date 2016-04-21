@@ -73,6 +73,9 @@ std::vector<std::string> &split_delims(const std::string &s,
 std::vector<std::string> split_delims(const std::string &s,
                                       const std::string& delims);
 
+string label_for_genotype(const string& gt);
+string genotype_for_label(const string& gt);
+
 class HHGA {
 public:
     string chrom_name;
@@ -113,6 +116,7 @@ public:
          vcflib::Variant& var,
          const string& input_name,
          const string& class_label,
+         bool gt_class = false,
          bool expon = false,
          bool show_bases = false,
          bool assume_ref = true);
