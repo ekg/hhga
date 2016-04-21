@@ -163,15 +163,20 @@ int main(int argc, char** argv) {
         headerss 
             << "##fileformat=VCFv4.3" << endl
             << "##source=hhga" << endl
-            << "##INFO=<ID=prediction,Number=1,Type=Integer,Description=\"hhga+vw prediction for site\">" << endl
-            << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" << endl
-            << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t";
-        headerss << sample_name;
+            << "##INFO=<ID=prediction,Number=1,Type=Integer,Description=\"hhga+vw prediction for site\">" << endl;
+        if (gt_class) {
+            headerss
+                << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" << endl;
+        }
+        headerss
+            << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO";
+        if (gt_class) {
+            headerss << "\tFORMAT\t" << sample_name;
+        }
         vcflib::VariantCallFile vcf_file;
         string header = headerss.str();
         vcf_file.openForOutput(header);
         // add sample
-        //vcf_file.sampleNames.push_back(sample_name);
         cout << vcf_file.header << endl;
         
         

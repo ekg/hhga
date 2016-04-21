@@ -7,7 +7,7 @@ PATH=../bin:$PATH # for vg
 
 export LC_ALL="C" # force a consistent sort order 
 
-plan tests 7
+plan tests 8
 
 hhga -h 2>/dev/null
 is $? 0 "hhga help runs"
@@ -23,3 +23,5 @@ is $(hhga -b minigiab/NA12878.chr22.tiny.bam -f minigiab/q.fa -v minigiab/h.vcf.
 is $(hhga -b minigiab/NA12878.chr22.tiny.bam -f minigiab/q.fa -v minigiab/NA12878.chr22.tiny.giab.vcf.gz -r q:10502-10562 -c 1 -s | md5sum | cut -f 1 -d\ ) 8a8cc7f0f668717043b20ea20cbf6c33 "reference allele compression is configurable"
 
 is $(hhga -b minigiab/NA12878.chr22.tiny.bam -f minigiab/q.fa -v minigiab/NA12878.chr22.tiny.giab.vcf.gz -r q:10502-10562 -c 1 | hhga -p | md5sum | cut -f 1 -d\ ) 5c367ebaea6ad02cf8c619ed0dd98319 "expected vcf-format output produced for a test region"
+
+is $(hhga -b minigiab/NA12878.chr22.tiny.bam -f minigiab/q.fa -v minigiab/NA12878.chr22.tiny.giab.vcf.gz -r q:10502-10562 -g | hhga -pg | md5sum | cut -f 1 -d\ ) 15d4679f7226f4404df595c34e64d138 "expected vcf-format output produced for a test region with genotype class"
