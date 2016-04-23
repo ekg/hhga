@@ -13,6 +13,7 @@
 #include "Fasta.h"
 #include "Variant.h"
 #include <cmath>
+#include "join.h"
 
 namespace hhga {
 

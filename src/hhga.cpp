@@ -156,7 +156,7 @@ string label_for_genotype(const string& gt) {
     } else if (gt == "1/1") {
         return "3";
     } else {
-        //cerr << "warning: unknown genotype '" << gt << "'" << endl;
+        cerr << "warning: unknown genotype '" << gt << "'" << endl;
         return "4";
     }
 }
@@ -553,8 +553,10 @@ HHGA::HHGA(size_t window_length,
     // and which we will later use to project back into VCF
     stringstream vrep;
     vrep << var.sequenceName << "_" << var.position;
-    vrep << "_" << var.ref;
-    for (auto& s : var.alt) vrep << "_" << s;
+    vrep << "_" << var.ref << "_";
+    vrep << join(var.alt, ",");
+    vrep << "_";
+    vrep << join(haplotype_seqs, ",");
     repr = vrep.str();
 
 }
