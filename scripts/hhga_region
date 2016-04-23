@@ -83,7 +83,6 @@ ground_region=$output_dir/$region.ground_truth.vcf.gz
 normalized_variants=$output_dir/$region.norm.vcf.gz
 callable_variants=$output_dir/$region.callable.vcf.gz
 uncallable_variants=$output_dir/$region.uncallable.vcf.gz
-passing_variants=$output_dir/$region.pass.vcf.gz
 labeled_variants=$output_dir/$region.label.vcf.gz
 hhga_genotypes=$output_dir/$region.hhga.gz
 
@@ -111,21 +110,13 @@ zcat $callable_variants \
     | vcfannotategenotypes GT - $ground_region \
     | vcfunphase - \
     | vcfnull2ref - \
-    | bgziptabix $passing_variants
+    | vcfannotategenotypes truth $callable_variants - \
+    | bgziptabix $labeled_variants
 
 hhga -f $ref -r $region \
-     -b $input_bam -v $passing_variants \
-     -w $window_size -g -S $sample_name \
+     -b $input_bam -v $labeled_variants \
+     -w $window_size -g truth -S $sample_name \
     | gzip >$hhga_genotypes
-
-if [ $debug == true ];
-then
-   zcat $callable_variants \
-       | vcfannotategenotypes groundGT - $ground_region \
-       | vcfunphase - \
-       | vcfnull2ref - \
-       | bgziptabix $labeled_variants
-fi
 
 if [ $debug == false ];
 then
@@ -133,6 +124,6 @@ then
     rm -f $normalized_variants*
     rm -f $callable_variants*
     rm -f $uncallable_variants*
-    rm -f $passing_variants*
+    rm -f $labeled_variants*
 fi
 
