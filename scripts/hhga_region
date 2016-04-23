@@ -90,6 +90,7 @@ tabix -h $ground_truth $region \
     | vcfintersect -b <(zcat $ground_callable) \
     | vcfallelicprimitives \
     | vt normalize -r $ref -q - 2>/dev/null \
+    | vcffixup - \
     | vcfunphase - \
     | vcfnull2ref - \
     | bgziptabix $ground_region
