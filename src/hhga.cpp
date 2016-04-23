@@ -151,9 +151,13 @@ string label_for_genotype(const string& gt) {
         return "1";
     } else if (gt == "0/1") {
         return "2";
+    } else if (gt == "0/2") {
+        return "2";
     } else if (gt == "1/2") {
         return "2";
     } else if (gt == "1/1") {
+        return "3";
+    } else if (gt == "2/2") {
         return "3";
     } else {
         cerr << "warning: unknown genotype '" << gt << "'" << endl;
