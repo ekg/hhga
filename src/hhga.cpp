@@ -553,7 +553,8 @@ HHGA::HHGA(size_t window_length,
     // and which we will later use to project back into VCF
     stringstream vrep;
     vrep << var.sequenceName << "_" << var.position;
-    for (auto& s : haplotype_seqs) vrep << "_" << s;
+    vrep << "_" << var.ref;
+    for (auto& s : var.alt) vrep << "_" << s;
     repr = vrep.str();
 
 }

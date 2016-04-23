@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
         stringstream headerss;
         if (sample_name.empty()) sample_name = "unknown";
         headerss 
-            << "##fileformat=VCFv4.3" << endl
+            << "##fileformat=VCFv4.1" << endl
             << "##source=hhga" << endl
             << "##INFO=<ID=prediction,Number=1,Type=Integer,Description=\"hhga+vw prediction for site\">" << endl;
         if (gt_class) {
