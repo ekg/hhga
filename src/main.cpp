@@ -21,7 +21,7 @@ void printUsage(int argc, char** argv) {
          << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
          << "    -s, --show-bases      show all the bases in the alignments instead of R ref match symbol" << endl
          << "    -p, --predictions-in  stream in predictions and output an annotated VCF" << endl
-         << "    -N, --sample NAME     name of the sample in the output VCF (use with --gt-class)" << endl
+         << "    -S, --sample NAME     name of the sample in the output VCF (use with --gt-class)" << endl
          << "    -d, --debug           print useful debugging information to stderr" << endl
          << endl
          << "Generates examples for vw using a VCF file and BAM file." << endl
@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
         stringstream headerss;
         if (sample_name.empty()) sample_name = "unknown";
         headerss 
-            << "##fileformat=VCFv4.3" << endl
+            << "##fileformat=VCFv4.1" << endl
             << "##source=hhga" << endl
             << "##INFO=<ID=prediction,Number=1,Type=Integer,Description=\"hhga+vw prediction for site\">" << endl;
         if (gt_class) {
@@ -195,21 +195,47 @@ int main(int argc, char** argv) {
             auto& seqname = vcf_fields[0];
             auto pos = stol(vcf_fields[1].c_str());
             auto& ref = vcf_fields[2];
+            auto& alts = vcf_fields[3];
+            auto& haps = vcf_fields[4];
 
             vcflib::Variant var(vcf_file);
             var.sequenceName = seqname;
             var.position = pos;
             var.quality = 0;
             var.ref = ref;
-            for (size_t i = 3; i < vcf_fields.size(); ++i) {
-                var.alt.push_back(vcf_fields[i]);
+
+            set<string> alleles;
+            alleles.insert(ref);
+            set<string> haplotypes;
+            for (auto& hap : split_delims(haps, ",")) {
+                haplotypes.insert(hap);
+                alleles.insert(hap);
             }
+            bool incl_ref = false;
+            if (alleles.size() == 3) {
+                incl_ref = false;
+            } else if (alleles.size() == 2) {
+                incl_ref = true;
+            } else {
+                // we need to filter this site out
+                // because we don't have any information about it being variable
+                // which will make various VCF utilities unhappy
+                continue;
+            }
+
+            for (auto& alt : haplotypes) {
+                if (alt != var.ref) {
+                    var.alt.push_back(alt);
+                }
+            }
+            if (var.alt.empty()) continue;
+
             var.id = ".";
             var.filter = ".";
             var.info["prediction"].push_back(convert(prediction));
             if (gt_class) {
                 var.samples[sample_name]["GT"].clear();
-                var.samples[sample_name]["GT"].push_back(genotype_for_label(prediction));
+                var.samples[sample_name]["GT"].push_back(genotype_for_label(prediction, incl_ref));
                 var.format.push_back("GT");
             }
             cout << var << endl;

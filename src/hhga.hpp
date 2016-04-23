@@ -13,6 +13,7 @@
 #include "Fasta.h"
 #include "Variant.h"
 #include <cmath>
+#include "join.h"
 
 namespace hhga {
 
@@ -74,7 +75,7 @@ std::vector<std::string> split_delims(const std::string &s,
                                       const std::string& delims);
 
 string label_for_genotype(const string& gt);
-string genotype_for_label(const string& gt);
+string genotype_for_label(const string& gt, bool incl_ref);
 
 class HHGA {
 public:
