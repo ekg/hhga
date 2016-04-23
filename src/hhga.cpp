@@ -152,16 +152,16 @@ string label_for_genotype(const string& gt) {
     } else if (gt == "0/1") {
         return "2";
     } else if (gt == "0/2") {
-        return "2";
-    } else if (gt == "1/2") {
-        return "2";
+        return "3";
     } else if (gt == "1/1") {
-        return "3";
+        return "4";
+    } else if (gt == "1/2") {
+        return "5";
     } else if (gt == "2/2") {
-        return "3";
+        return "6";
     } else {
         cerr << "warning: unknown genotype '" << gt << "'" << endl;
-        return "4";
+        return "7";
     }
 }
 
@@ -169,16 +169,15 @@ string genotype_for_label(const string& gt, bool incl_ref) {
     if        (gt == "1") {
         return "0/0";
     } else if (gt == "2") {
-        // to ensure a valid file in which all alleles in the genotype
-        // are attached to the record, we need to flatten 0/1 and 1/2 together
-        // depending on whether the hhga was over two non-reference alleles or not
-        if (incl_ref) {
-            return "0/1";
-        } else {
-            return "1/2";
-        }
+        return "0/1";
     } else if (gt == "3") {
+        return "0/2";
+    } else if (gt == "4") {
         return "1/1";
+    } else if (gt == "5") {
+        return "1/2";
+    } else if (gt == "6") {
+        return "2/2";
     } else {
         //cerr << "warning: unknown genotype '" << gt << "'" << " expected one of 0/0, 0/1, 0/2, 1/1, 1/2, 2/2" << endl;
         return "./.";
@@ -703,15 +702,17 @@ const string HHGA::vw(void) {
     out << label << " ";
     out << "'" << repr << " ";
     // do the ref
-    out << "|ref ";
+    out << "|hap0 index:0 ";
     size_t idx = 0;
     for (auto& allele : reference) {
         out << ++idx << allele.alt << ":" << allele.prob << " ";;
     }
     // do the haps
-    size_t i = 0;
+    size_t i = 1;
     for (auto& hap : haplotypes) {
-        out << "|hap" << i++ << " ";
+        out << "|hap" << i << " ";
+        out << "index:" << i << " ";
+        ++i;
         idx = 0;
         for (auto& allele : hap) {
             out << ++idx << allele.alt << ":" << allele.prob << " ";;

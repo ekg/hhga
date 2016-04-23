@@ -90,6 +90,7 @@ tabix -h $ground_truth $region \
     | vcfintersect -b <(zcat $ground_callable) \
     | vcfallelicprimitives -kg \
     | vt normalize -r $ref -q - 2>/dev/null \
+    | vcfgeno2haplo -r $ref -w 0 \
     | vcffixup - \
     | vcfunphase - \
     | vcfnull2ref - \
@@ -98,6 +99,7 @@ tabix -h $ground_truth $region \
 tabix -h $variant_calls $region \
     | vcfallelicprimitives -kg \
     | vt normalize -r $ref -q - 2>/dev/null \
+    | vcfgeno2haplo -r $ref -w 0 \
     | vcfunphase - \
     | vcfnull2ref - \
     | vcfstreamsort -w 100000 | bgziptabix $normalized_variants
