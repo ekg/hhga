@@ -195,14 +195,15 @@ int main(int argc, char** argv) {
             auto& seqname = vcf_fields[0];
             auto pos = stol(vcf_fields[1].c_str());
             auto& ref = vcf_fields[2];
-            auto& alt = vcf_fields[3];
 
             vcflib::Variant var(vcf_file);
             var.sequenceName = seqname;
             var.position = pos;
             var.quality = 0;
             var.ref = ref;
-            var.alt.push_back(alt);
+            for (size_t i = 3; i < vcf_fields.size(); ++i) {
+                var.alt.push_back(vcf_fields[i]);
+            }
             var.id = ".";
             var.filter = ".";
             var.info["prediction"].push_back(convert(prediction));

@@ -48,11 +48,11 @@ tabix -h $variant_calls $region \
 vcfintersect -b <(zcat $ground_callable) $normalized_variants | bgziptabix $callable_variants
 vcfintersect -v -b <(zcat $ground_callable) $normalized_variants | bgziptabix $uncallable_variants
 
-#zcat $callable_variants \
-#    | vcfannotategenotypes groundGT - $ground_region \
-#    | vcfunphase - \
-#    | vcfnull2ref - \
-#    | bgziptabix $labeled_variants
+zcat $callable_variants \
+    | vcfannotategenotypes groundGT - $ground_region \
+    | vcfunphase - \
+    | vcfnull2ref - \
+    | bgziptabix $labeled_variants
 
 zcat $callable_variants \
     | vcfannotategenotypes GT - $ground_region \
@@ -63,9 +63,9 @@ zcat $callable_variants \
 hhga -f $ref -r $region -b $input_bam -v $passing_variants -w $window_size -g \
     | gzip >$hhga_genotypes
 
-rm -f $ground_region*
-rm -f $normalized_variants*
-rm -f $callable_variants*
-rm -f $uncallable_variants*
-rm -f $passing_variants*
+#rm -f $ground_region*
+#rm -f $normalized_variants*
+#rm -f $callable_variants*
+#rm -f $uncallable_variants*
+#rm -f $passing_variants*
 
