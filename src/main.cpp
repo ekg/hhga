@@ -201,15 +201,21 @@ int main(int argc, char** argv) {
             var.position = pos;
             var.quality = 0;
             var.ref = ref;
+            set<string> uniq_alts;
             for (size_t i = 3; i < vcf_fields.size(); ++i) {
-                var.alt.push_back(vcf_fields[i]);
+                uniq_alts.insert(vcf_fields[i]);
             }
+            for (auto& alt : uniq_alts) {
+                var.alt.push_back(alt);
+            }
+
             var.id = ".";
             var.filter = ".";
             var.info["prediction"].push_back(convert(prediction));
             if (gt_class) {
+                bool incl_ref = (var.alt.size() == 1);
                 var.samples[sample_name]["GT"].clear();
-                var.samples[sample_name]["GT"].push_back(genotype_for_label(prediction));
+                var.samples[sample_name]["GT"].push_back(genotype_for_label(prediction, incl_ref));
                 var.format.push_back("GT");
             }
             cout << var << endl;

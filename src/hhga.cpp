@@ -151,33 +151,30 @@ string label_for_genotype(const string& gt) {
         return "1";
     } else if (gt == "0/1") {
         return "2";
-    } else if (gt == "0/2") {
-        return "3";
-    } else if (gt == "1/1") {
-        return "4";
     } else if (gt == "1/2") {
-        return "5";
-    } else if (gt == "2/2") {
-        return "6";
+        return "2";
+    } else if (gt == "1/1") {
+        return "3";
     } else {
         //cerr << "warning: unknown genotype '" << gt << "'" << endl;
-        return "7";
+        return "4";
     }
 }
 
-string genotype_for_label(const string& gt) {
+string genotype_for_label(const string& gt, bool incl_ref) {
     if        (gt == "1") {
         return "0/0";
     } else if (gt == "2") {
-        return "0/1";
+        // to ensure a valid file in which all alleles in the genotype
+        // are attached to the record, we need to flatten 0/1 and 1/2 together
+        // depending on whether the hhga was over two non-reference alleles or not
+        if (incl_ref) {
+            return "0/1";
+        } else {
+            return "1/2";
+        }
     } else if (gt == "3") {
-        return "0/2";
-    } else if (gt == "4") {
         return "1/1";
-    } else if (gt == "5") {
-        return "1/2";
-    } else if (gt == "6") {
-        return "2/2";
     } else {
         //cerr << "warning: unknown genotype '" << gt << "'" << " expected one of 0/0, 0/1, 0/2, 1/1, 1/2, 2/2" << endl;
         return "./.";
@@ -220,11 +217,6 @@ HHGA::HHGA(size_t window_length,
     int32_t end_pos = begin_pos + window_length;
     string seq_name = var.sequenceName;
     int32_t center_pos = var.position-1;//begin_pos + (end_pos - begin_pos) / 2;
-
-    stringstream vrep;
-    vrep << var.sequenceName << "_" << var.position;
-    for (auto& s : var.alleles) vrep << "_" << s;
-    repr = vrep.str();
 
     // we'll use this later to cut and pad the matrix
     string window_ref_seq = fasta_ref.getSubSequence(seq_name, begin_pos, window_length);
@@ -399,6 +391,7 @@ HHGA::HHGA(size_t window_length,
     
     // for each sample
     // get the genotype
+    vector<string> haplotype_seqs;
     for (auto& s : var.samples) {
         auto& gtstr = s.second["GT"].front();
         auto gt = vcflib::decomposeGenotype(gtstr);
@@ -406,8 +399,9 @@ HHGA::HHGA(size_t window_length,
             //cerr << g.first << "->" << g.second << endl;
             // add a haplotype for the allele
             if (g.first != vcflib::NULL_ALLELE) {
-                for (size_t i = 0; i < g.second; ++i){ 
+                for (size_t i = 0; i < g.second; ++i){
                     haplotypes.push_back(vhaps[var.alleles[g.first]]);
+                    haplotype_seqs.push_back(var.alleles[g.first]);
                 }
             }
         }
@@ -554,6 +548,13 @@ HHGA::HHGA(size_t window_length,
             }
         }
     }
+
+    // make the label that represents our hhga site
+    // and which we will later use to project back into VCF
+    stringstream vrep;
+    vrep << var.sequenceName << "_" << var.position;
+    for (auto& s : haplotype_seqs) vrep << "_" << s;
+    repr = vrep.str();
 
 }
 
