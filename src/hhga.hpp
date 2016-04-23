@@ -117,7 +117,7 @@ public:
          vcflib::Variant& var,
          const string& input_name,
          const string& class_label,
-         bool gt_class = false,
+         const string& gt_class,
          bool expon = false,
          bool show_bases = false,
          bool assume_ref = true);

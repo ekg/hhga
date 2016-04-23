@@ -24,4 +24,4 @@ is $(hhga -b minigiab/NA12878.chr22.tiny.bam -f minigiab/q.fa -v minigiab/NA1287
 
 is $(hhga -b minigiab/NA12878.chr22.tiny.bam -f minigiab/q.fa -v minigiab/NA12878.chr22.tiny.giab.vcf.gz -r q:10502-10562 -c 1 | hhga -p | md5sum | cut -f 1 -d\ ) fa6d278a26e3477df10131767d6ee5ac "expected vcf-format output produced for a test region"
 
-is $(hhga -b minigiab/NA12878.chr22.tiny.bam -f minigiab/q.fa -v minigiab/NA12878.chr22.tiny.giab.vcf.gz -r q:10502-10562 -g | hhga -pg | md5sum | cut -f 1 -d\ ) a5cde582888857a67712dc28b0fe7666 "expected vcf-format output produced for a test region with genotype class"
+is $(hhga -b minigiab/NA12878.chr22.tiny.bam -f minigiab/q.fa -v minigiab/NA12878.chr22.tiny.giab.vcf.gz -r q:10502-10562 -g GT | hhga -G | md5sum | cut -f 1 -d\ ) a5cde582888857a67712dc28b0fe7666 "expected vcf-format output produced for a test region with genotype class"

@@ -191,18 +191,18 @@ HHGA::HHGA(size_t window_length,
            vcflib::Variant& var,
            const string& input_name,
            const string& class_label,
-           bool gt_class,
+           const string& gt_class,
            bool expon,
            bool show_bases,
            bool assume_ref) { // assumes the haplotypes are ref everywhere
 
     exponentiate = expon;
 
-    if (gt_class) {
+    if (!gt_class.empty()) {
         // convert the genotype into
         // require that it be in
         // 0/0, 0/1, 1/1, 0/2, 1/2, 2/2
-        auto gt = var.samples[var.sampleNames.front()]["GT"].front();
+        auto gt = var.samples[var.sampleNames.front()][gt_class].front();
         label = label_for_genotype(gt);
     } else {
         label = class_label;
