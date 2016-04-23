@@ -11,6 +11,7 @@ ground_callable=false
 input_bam=false
 vcf=false
 output_dir=false
+sample_name=false
 
 if [ $# -eq 0 ];
 then
@@ -18,7 +19,7 @@ then
 fi
 
 # read the options
-TEMP=`getopt -o r:w:f:t:b:a:v:o:hd --long region:,window:,fasta-ref:,truth:,alignments:,vcf:,output:,help,debug -n 'hhga_region' -- "$@"`
+TEMP=`getopt -o r:w:f:T:B:b:v:o:S:hd --long region:,window:,fasta-ref:,truth:,targets:,sample:,bam:,vcf:,output:,help,debug -n 'hhga_region' -- "$@"`
 eval set -- "$TEMP"
 
 # extract options and their arguments into variables.
@@ -27,11 +28,12 @@ while true ; do
         -r|--region) region=$2 ; shift 2 ;;
         -w|--window) window_size=$2 ; shift 2 ;;
         -f|--fasta-ref) ref=$2 ; shift 2 ;;
-        -t|--truth) ground_truth=$2 ; shift 2 ;;
-        -b|--targets) ground_callable=$2 ; shift 2 ;;
-        -a|--alignments) input_bam=$2 ; shift 2 ;;
+        -T|--truth) ground_truth=$2 ; shift 2 ;;
+        -B|--targets) ground_callable=$2 ; shift 2 ;;
+        -b|--bam) input_bam=$2 ; shift 2 ;;
         -v|--vcf) vcf=$2 ; shift 2 ;;
         -o|--output) output_dir=$2 ; shift 2 ;;
+        -S|--sample) sample_name=$2 ; shift 2 ;;
         -h|--help) show_help=true ; shift ;;
         -d|--debug) debug=true ; shift ;;
         --) shift ; break ;;
@@ -46,7 +48,9 @@ if [[    $region == false
       || $ground_callable == false
       || $input_bam == false
       || $vcf == false
-      || $output_dir == false ]];
+      || $output_dir == false
+      || $sample_name == false
+    ]];
 then
     show_help=true
 fi
@@ -55,7 +59,17 @@ if [ $show_help == true ];
 then
     echo "usage: $0 [options]"
     echo "options:"
-    echo "    -r [region] -w [window] -f [ref] -t [truth] -b [targets] -a [bam] -v [vcf] -o [output]"
+    echo "    -r, --region arg      the target region"
+    echo "    -f, --fasta-ref arg   the FASTA reference genome"
+    echo "    -w, --window arg      the window size in base pairs"
+    echo "    -T, --truth arg       the VCF file used as the truth set"
+    echo "    -B, --targets arg     targets to use in the comparison with the truth set"
+    echo "    -b, --bam arg         the BAM-format alignment file for the sample we are learning from"
+    echo "    -v, --vcf arg         the VCF file describing our example genotypes"
+    echo "    -o, --output arg      write our output into this directory named dir/region.hhga.gz"
+    echo "    -S, --sample arg      the sample name"
+    echo "    -d, --debug           turns on debugging"
+    echo "    -h, --help            this text"
     echo "    add --debug for debugging output"
     echo "Generates hhga data for this region in the outut directory."
     exit
@@ -99,7 +113,9 @@ zcat $callable_variants \
     | vcfnull2ref - \
     | bgziptabix $passing_variants
 
-hhga -f $ref -r $region -b $input_bam -v $passing_variants -w $window_size -g \
+hhga -f $ref -r $region \
+     -b $input_bam -v $passing_variants \
+     -w $window_size -g -S $sample_name \
     | gzip >$hhga_genotypes
 
 if [ $debug == true ];
