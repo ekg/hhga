@@ -255,38 +255,24 @@ string genotype_for_labels(const map<int, double>& gt,
 double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2) {
     int count = 0;
     // assert they are normalized
-    //cerr << h1.size() << " vs " << h2.size() << endl;
     // that given, we can compare directly
-    map<int, vector<allele_t*> > p1;
-    map<int, vector<allele_t*> > p2;
+    map<int, const allele_t*> p1;
+    map<int, const allele_t*> p2;
     for (size_t i = 0; i < h1.size(); ++i) {
-        auto a = h1[i];
-        p1[a.position].push_back(&a);
+        p1[i] = &h1[i];
     }
     for (size_t i = 0; i < h2.size(); ++i) {
-        auto a = h2[i];
-        p2[a.position].push_back(&a);
+        p2[i] = &h2[i];
     }
     // XXX looking only from the direction of h1
     int covered = 0;
-    size_t length = h1.size();
     for (auto& p : p1) {
-        auto v1 = p1[p.first];
-        auto v2 = p2[p.first];
-        if (v1.size() != v2.size()) continue;
+        auto a1 = p1[p.first]->alt;
+        auto a2 = p2[p.first]->alt;
+        if (a1 == "M" || a2 == "M") continue;
         ++covered;
-        bool match = true;
-        for (size_t i = 0; i < v1.size(); ++i) {
-            auto a1 = v1[i]->alt;
-            auto a2 = v2[i]->alt;
-            if (a1 == "M" || a2 == "M") {
-                match = false;
-            } else if (a1 == a2) {
-                ++count;
-            }
-        }
-        if (match) {
-            ++covered;
+        if (a1 == a2) {
+            ++count;
         }
     }
     return (covered ? (double) count / (double) covered : 0);
@@ -699,7 +685,9 @@ HHGA::HHGA(size_t window_length,
         int i = 0;
         auto& weight = matches[&aln];
         for (auto& hap : haplotypes) {
-            weight[i] = pairwise_identity(alignment_alleles[&aln], haplotypes[i]);
+            weight[i] = pairwise_identity(
+                hap,
+                alignment_alleles[&aln]);
             ++i;
         }
     }
