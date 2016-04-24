@@ -264,7 +264,11 @@ double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2)
     for (size_t i = 0; i < h2.size(); ++i) {
         p2[i] = &h2[i];
     }
-    // XXX looking only from the direction of h1
+    int possible = 0;
+    for (auto& p : p2) {
+        auto a2 = p.second->alt;
+        if (a2 != "M") ++possible;
+    }
     int covered = 0;
     for (auto& p : p1) {
         auto a1 = p1[p.first]->alt;
@@ -275,7 +279,7 @@ double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2)
             ++count;
         }
     }
-    return (covered ? (double) count / (double) covered : 0);
+    return (possible ? (double) count / (double) possible : 0);
 }
 
 int missing_count(const vector<allele_t>& hap) {
@@ -686,8 +690,8 @@ HHGA::HHGA(size_t window_length,
         auto& weight = matches[&aln];
         for (auto& hap : haplotypes) {
             weight[i] = pairwise_identity(
-                hap,
-                alignment_alleles[&aln]);
+                alignment_alleles[&aln],
+                hap);
             ++i;
         }
     }
