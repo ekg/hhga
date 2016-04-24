@@ -76,6 +76,11 @@ std::vector<std::string> split_delims(const std::string &s,
 
 string label_for_genotype(const string& gt);
 string genotype_for_label(const string& gt, int alt_count);
+string genotype_for_labels(const map<string, double>& gt,
+                           int alt_count);
+string multiclass_label_for_genotype(const string& gt);
+map<int, double> labels_for_genotype(const string& gt);
+map<int, double> test_labels(int alt_count);
 
 class HHGA {
 public:
@@ -118,6 +123,7 @@ public:
          const string& input_name,
          const string& class_label,
          const string& gt_class,
+         bool multiclass = false,
          bool expon = false,
          bool show_bases = false,
          bool assume_ref = true);

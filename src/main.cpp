@@ -18,6 +18,7 @@ void printUsage(int argc, char** argv) {
          << "    -t, --text-viz        make a human-readible, compact output" << endl
          << "    -c, --class-label X   add this label (e.g. -1 for false, 1 for true)" << endl
          << "    -g, --gt-class FIELD  use this sample field to make genotype class labels" << endl
+         << "    -m, --multiclass      generate multiclass labels rather than single class assignment [BROKEN]" << endl
          << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
          << "    -s, --show-bases      show all the bases in the alignments instead of R ref match symbol" << endl
          << "    -p, --binary-pred-in  stream in binary predictions and write annotated VCF" << endl
@@ -49,6 +50,7 @@ int main(int argc, char** argv) {
     bool binary_predictions_in = false;
     bool genotype_predictions_in = false;
     string gt_class;
+    bool multiclass = false;
     string sample_name;
 
     // parse command-line options
@@ -73,13 +75,14 @@ int main(int argc, char** argv) {
             {"bin-pred-in", no_argument, 0, 'p'},
             {"gt-pred-in", no_argument, 0, 'G'},
             {"sample-name", required_argument, 0, 'S'},
+            {"multiclass", required_argument, 0, 'm'},
             {"debug", no_argument, 0, 'd'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg:S:G",
+        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg:S:Gm",
                          long_options, &option_index);
 
         if (c == -1)
@@ -147,6 +150,10 @@ int main(int argc, char** argv) {
 
         case 'G':
             genotype_predictions_in = true;
+            break;
+
+        case 'm':
+            multiclass = true;
             break;
 
         case 'S':
@@ -296,6 +303,7 @@ int main(int argc, char** argv) {
                   vcf_feature_prefix,
                   class_label,
                   gt_class,
+                  multiclass,
                   exponentiate,
                   show_bases,
                   assume_ref);

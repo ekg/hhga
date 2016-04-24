@@ -199,6 +199,59 @@ string genotype_for_label(const string& gt, int alt_count) {
     }
 }
 
+map<int, double> test_labels(int alt_count) {
+    map<int, double> labels;
+    for (int i = 1; i < alt_count+1; ++i) {
+        labels[i] = 0;
+    }
+    return labels;
+}
+
+string multiclass_label_for_genotype(const string& gt) {
+    vector<string> label;
+    auto labg = labels_for_genotype(gt);
+    for (auto m : labg) {
+        stringstream lss;
+        lss << m.first << ":" << m.second;
+        label.push_back(lss.str());
+    }
+    return join(label, " ");
+}
+
+map<int, double> labels_for_genotype(const string& gt) {
+    map<int, double> labels;
+    for (auto allele : vcflib::decomposeGenotype(gt)) {
+        labels[allele.first+1] = allele.second;
+    }
+    return labels;
+}
+
+string genotype_for_labels(const map<int, double>& gt,
+                           int alt_count) {
+    // count up weight until we get to 2
+    map<double, vector<int> > allele_by_weight;
+    for (auto& g : gt) {
+        allele_by_weight[g.second].push_back(g.first);
+    }
+    vector<pair<double, int> > flattened_by_weight;
+    for (auto& a : allele_by_weight) {
+        for (auto& v : a.second) {
+            flattened_by_weight.push_back(make_pair(a.first, v));
+        }
+    }
+    double weight = 0;
+    vector<string> gts;
+    for (auto& w : flattened_by_weight) {
+        int count = round(w.first);
+        for (int i = 0; i < count; ++i) {
+            gts.push_back(std::to_string(w.second-1));
+        }
+        weight += count;
+        if (weight >= 2) break; // diploid
+    }
+    return join(gts, "/");
+}
+
 HHGA::HHGA(size_t window_length,
            BamTools::BamMultiReader& bam_reader,
            FastaReference& fasta_ref,
@@ -206,6 +259,7 @@ HHGA::HHGA(size_t window_length,
            const string& input_name,
            const string& class_label,
            const string& gt_class,
+           bool multiclass,
            bool expon,
            bool show_bases,
            bool assume_ref) { // assumes the haplotypes are ref everywhere
@@ -217,7 +271,12 @@ HHGA::HHGA(size_t window_length,
         // require that it be in
         // 0/0, 0/1, 1/1, 0/2, 1/2, 2/2
         auto gt = var.samples[var.sampleNames.front()][gt_class].front();
-        label = label_for_genotype(gt);
+        if (!multiclass) {
+            label = label_for_genotype(gt);
+        } else {
+            // handles generic case with many alleles
+            label = multiclass_label_for_genotype(gt);
+        }
     } else {
         label = class_label;
     }
