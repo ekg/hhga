@@ -469,20 +469,27 @@ HHGA::HHGA(size_t window_length,
     // for each sample
     // get the genotype
     vector<string> haplotype_seqs;
-    for (auto& s : var.samples) {
-        auto& gtstr = s.second["GT"].front();
-        auto gt = vcflib::decomposeGenotype(gtstr);
-        for (auto& g : gt) {
-            //cerr << g.first << "->" << g.second << endl;
-            // add a haplotype for the allele
-            if (g.first != vcflib::NULL_ALLELE) {
-                for (size_t i = 0; i < g.second; ++i){
-                    haplotypes.push_back(vhaps[var.alleles[g.first]]);
-                    haplotype_seqs.push_back(var.alleles[g.first]);
+    if (!gt_class.empty()) {
+        for (auto& allele : var.alt) {
+            haplotypes.push_back(vhaps[allele]);
+            haplotype_seqs.push_back(allele);
+        }
+    } else {
+        for (auto& s : var.samples) {
+            auto& gtstr = s.second["GT"].front();
+            auto gt = vcflib::decomposeGenotype(gtstr);
+            for (auto& g : gt) {
+                //cerr << g.first << "->" << g.second << endl;
+                // add a haplotype for the allele
+                if (g.first != vcflib::NULL_ALLELE) {
+                    for (size_t i = 0; i < g.second; ++i){
+                        haplotypes.push_back(vhaps[var.alleles[g.first]]);
+                        haplotype_seqs.push_back(var.alleles[g.first]);
+                    }
                 }
             }
+            //cerr << gtstr << endl;
         }
-        //cerr << gtstr << endl;
     }
 
     // for all the info fields
@@ -632,8 +639,6 @@ HHGA::HHGA(size_t window_length,
     vrep << var.sequenceName << "_" << var.position;
     vrep << "_" << var.ref << "_";
     vrep << join(var.alt, ",");
-    vrep << "_";
-    vrep << join(haplotype_seqs, ",");
     repr = vrep.str();
 
 }
@@ -776,7 +781,7 @@ const string HHGA::vw(void) {
     out << label << " ";
     out << "'" << repr << " ";
     // do the ref
-    out << "|hap0 index:0 ";
+    out << "|ref index:0 ";
     size_t idx = 0;
     for (auto& allele : reference) {
         out << ++idx << allele.alt << ":" << allele.prob << " ";;

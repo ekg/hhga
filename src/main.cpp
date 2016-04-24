@@ -209,8 +209,7 @@ int main(int argc, char** argv) {
             auto& seqname = vcf_fields[0];
             auto pos = stol(vcf_fields[1].c_str());
             auto& ref = vcf_fields[2];
-            auto& alts = vcf_fields[3];
-            auto& haps = vcf_fields[4];
+            auto haps = split_delims(vcf_fields[3], ",");
 
             vcflib::Variant var(vcf_file);
             var.sequenceName = seqname;
@@ -220,24 +219,11 @@ int main(int argc, char** argv) {
 
             set<string> alleles;
             alleles.insert(ref);
-            set<string> haplotypes;
-            for (auto& hap : split_delims(haps, ",")) {
-                haplotypes.insert(hap);
+            for (auto& hap : haps) {
                 alleles.insert(hap);
             }
-            bool incl_ref = false;
-            if (alleles.size() == 3) {
-                incl_ref = false;
-            } else if (alleles.size() == 2) {
-                incl_ref = true;
-            } else {
-                // we need to filter this site out
-                // because we don't have any information about it being variable
-                // which will make various VCF utilities unhappy
-                continue;
-            }
 
-            for (auto& alt : haplotypes) {
+            for (auto& alt : haps) {
                 if (alt != var.ref) {
                     var.alt.push_back(alt);
                 }
