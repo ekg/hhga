@@ -252,6 +252,34 @@ string genotype_for_labels(const map<int, double>& gt,
     return join(gts, "/");
 }
 
+double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2) {
+    int count = 0;
+    // assert they are normalized
+    assert(h1.size() == h2.size());
+    // that given, we can compare directly
+    int covered = 0;
+    size_t length = h1.size();
+    for (size_t i = 0; i < length; ++i) {
+        auto a1 = h1[i].alt;
+        auto a2 = h2[i].alt;
+        // skip missing
+        if (a1 == "M" || a2 == "M") {
+            continue;
+        }
+        ++covered;
+        if (h1[i].alt == h2[i].alt) {
+            ++count;
+        }
+    }
+    return (covered ? (double) count / (double) covered : 0);
+}
+
+int missing_count(const vector<allele_t>& hap) {
+    int m = 0;
+    for (auto& a : hap) if (a.alt == "M") ++m;
+    return m;
+}
+
 HHGA::HHGA(size_t window_length,
            BamTools::BamMultiReader& bam_reader,
            FastaReference& fasta_ref,
@@ -469,7 +497,7 @@ HHGA::HHGA(size_t window_length,
     // for each sample
     // get the genotype
     vector<string> haplotype_seqs;
-    for (auto& allele : var.alt) {
+    for (auto& allele : var.alleles) {
         haplotypes.push_back(vhaps[allele]);
         haplotype_seqs.push_back(allele);
     }
@@ -647,6 +675,40 @@ HHGA::HHGA(size_t window_length,
         }
     }
 
+    // establish the allele/hap/ref matches
+    for (auto& aln : alignments) {
+        int i = 0;
+        auto& weight = matches[&aln];
+        for (auto& hap : haplotypes) {
+            weight[i] = pairwise_identity(alignment_alleles[&aln], haplotypes[i]);
+            ++i;
+        }
+    }
+
+    // sort the alignments by the fraction of match and then by position
+    // TODO record an alignment sort order
+    // and use it on output
+    for (auto& aln : alignments) {
+        if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        ordered_alignments.push_back(&aln);
+    }
+    // sort by mismatch count
+    // then by position
+    std::sort(ordered_alignments.begin(), ordered_alignments.end(),
+              [&](alignment_t* a1, alignment_t* a2) {
+                  auto& h1 = alignment_alleles[a1];
+                  auto& h2 = alignment_alleles[a2];
+                  auto m1 = missing_count(h1);
+                  auto m2 = missing_count(h2);
+                  if (m1 < m2) {
+                      return true;
+                  } else if (m1 == m2) {
+                      return a1->Position < a2->Position;
+                  } else {
+                      return false;
+                  }
+              });
+
     // make the label that represents our hhga site
     // and which we will later use to project back into VCF
     stringstream vrep;
@@ -732,6 +794,7 @@ vector<allele_t> HHGA::pad_alleles(vector<allele_t> aln_alleles,
 const string HHGA::str(void) {
     //return std::to_string(alleles.size());
     stringstream out;
+    out << std::fixed << std::setprecision(1);
     out << repr << endl;
     out << "reference   ";
     for (auto& allele : reference) {
@@ -763,9 +826,8 @@ const string HHGA::str(void) {
     }
 
     size_t i = 0;
-    for (auto& aln : alignments) {
-        // skip removed alignments
-        if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+    for (auto a : ordered_alignments) {
+        auto& aln = *a;
         // print out the stuff
         if (aln.IsReverseStrand())     out << "S"; else out << "s";
         if (aln.IsMateReverseStrand()) out << "O"; else out << "o";
@@ -784,7 +846,12 @@ const string HHGA::str(void) {
             else if (allele.alt == "R") out << ".";
             else out << allele.alt;
         }
-        out << " " << aln.MapQuality;
+        // now the matches
+        out << " ";
+        for (auto w : matches[&aln]) {
+            out << w.second << " ";
+        }
+        out << aln.MapQuality;
         out << " " << aln.Name;
         out << endl;
     }
@@ -805,7 +872,7 @@ const string HHGA::vw(void) {
     out << label << " ";
     out << "'" << repr << " ";
     // do the ref
-    out << "|ref index:0 ";
+    out << "|ref ";
     size_t idx = 0;
     for (auto& allele : reference) {
         out << ++idx << allele.alt << ":" << allele.prob << " ";;
@@ -814,7 +881,6 @@ const string HHGA::vw(void) {
     size_t i = 1;
     for (auto& hap : haplotypes) {
         out << "|hap" << i << " ";
-        out << "index:" << i << " ";
         ++i;
         idx = 0;
         for (auto& allele : hap) {
@@ -825,7 +891,6 @@ const string HHGA::vw(void) {
     int gid = 0;
     for (auto& geno : genotypes) {
         out << "|geno" << i << " ";
-        out << "sample:" << sample_id[gid++] << " ";
         ++i;
         idx = 0;
         for (auto& allele : geno) {
@@ -833,16 +898,25 @@ const string HHGA::vw(void) {
         }
     }
 
-    // do the strands
-    // do the mapping probs
     i = 0;
     // do the alignments
-    for (auto& aln : alignments) {
-        // skip removed alignments
-        if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+    for (auto a : ordered_alignments) {
+        auto& aln = *a;
         auto name = "aln" + std::to_string(i++);
         out << "|" << name << " ";
-        // handle mapping quality
+        // now alleles
+        idx = 0;
+        for (auto& allele : alignment_alleles[&aln]) {
+            out << ++idx << allele.alt << ":" << allele.prob << " ";
+        }
+    }
+
+    i = 0;
+    // do the strands
+    // do the mapping probs
+    for (auto a : ordered_alignments) {
+        auto& aln = *a;
+        out << "|properties" << i++ << " ";
         if (exponentiate) {
             out << "mapqual:" << 1-phred2float(min(aln.MapQuality, (uint16_t)60)) << " ";
         } else {
@@ -859,12 +933,17 @@ const string HHGA::vw(void) {
         if (aln.IsPaired())            out << "paired:1"; else out << "paired:0"; out << " ";
         if (aln.IsPrimaryAlignment())  out << "zprimary:1"; else out << "zprimary:0"; out << " ";
         if (aln.IsProperPair())        out << "iproper:1"; else out << "iproper:0"; out << " ";
-        // now alleles
-        idx = 0;
-        for (auto& allele : alignment_alleles[&aln]) {
-            out << ++idx << allele.alt << ":" << allele.prob << " ";
+    }
+    
+    i = 0;
+    for (auto a : ordered_alignments) {
+        auto& aln = *a;
+        out << "|match" << i++ << " ";
+        for (auto w : matches[&aln]) {
+            out << w.first+1 << "H:" << w.second << " ";
         }
     }
+
     out << "|software ";
     // now handle caller input features
     for (auto& f : call_info_num) {

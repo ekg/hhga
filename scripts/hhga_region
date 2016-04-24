@@ -117,6 +117,7 @@ zcat $callable_variants \
 hhga -f $ref -r $region \
      -b $input_bam -v $labeled_variants \
      -w $window_size -g truth -S $sample_name \
+     --assume-ref \
     | gzip >$hhga_genotypes
 
 if [ $debug == false ];

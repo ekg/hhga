@@ -13,6 +13,8 @@
 #include "Fasta.h"
 #include "Variant.h"
 #include <cmath>
+#include <iomanip>
+
 #include "join.h"
 
 namespace hhga {
@@ -81,6 +83,9 @@ string genotype_for_labels(const map<string, double>& gt,
 string multiclass_label_for_genotype(const string& gt);
 map<int, double> labels_for_genotype(const string& gt);
 map<int, double> test_labels(int alt_count);
+// fraction of times where both are non-missing where they agree
+double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2);
+int missing_count(const vector<allele_t>& hap);
 
 class HHGA {
 public:
@@ -93,6 +98,8 @@ public:
     //set<allele_t> alleles;
     vector<alignment_t> alignments;
     map<alignment_t*, vector<allele_t> > alignment_alleles;
+    map<alignment_t*, map<int, double> > matches;
+    vector<alignment_t*> ordered_alignments;
 
     // the class label for the example
     string label;
