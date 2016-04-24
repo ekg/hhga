@@ -255,21 +255,38 @@ string genotype_for_labels(const map<int, double>& gt,
 double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2) {
     int count = 0;
     // assert they are normalized
-    cerr << h1.size() << " vs " << h2.size() << endl;
-    assert(h1.size() == h2.size());
+    //cerr << h1.size() << " vs " << h2.size() << endl;
     // that given, we can compare directly
+    map<int, vector<allele_t*> > p1;
+    map<int, vector<allele_t*> > p2;
+    for (size_t i = 0; i < h1.size(); ++i) {
+        auto a = h1[i];
+        p1[a.position].push_back(&a);
+    }
+    for (size_t i = 0; i < h2.size(); ++i) {
+        auto a = h2[i];
+        p2[a.position].push_back(&a);
+    }
+    // XXX looking only from the direction of h1
     int covered = 0;
     size_t length = h1.size();
-    for (size_t i = 0; i < length; ++i) {
-        auto a1 = h1[i].alt;
-        auto a2 = h2[i].alt;
-        // skip missing
-        if (a1 == "M" || a2 == "M") {
-            continue;
-        }
+    for (auto& p : p1) {
+        auto v1 = p1[p.first];
+        auto v2 = p2[p.first];
+        if (v1.size() != v2.size()) continue;
         ++covered;
-        if (h1[i].alt == h2[i].alt) {
-            ++count;
+        bool match = true;
+        for (size_t i = 0; i < v1.size(); ++i) {
+            auto a1 = v1[i]->alt;
+            auto a2 = v2[i]->alt;
+            if (a1 == "M" || a2 == "M") {
+                match = false;
+            } else if (a1 == a2) {
+                ++count;
+            }
+        }
+        if (match) {
+            ++covered;
         }
     }
     return (covered ? (double) count / (double) covered : 0);
