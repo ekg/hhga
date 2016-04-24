@@ -255,6 +255,7 @@ string genotype_for_labels(const map<int, double>& gt,
 double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2) {
     int count = 0;
     // assert they are normalized
+    cerr << h1.size() << " vs " << h2.size() << endl;
     assert(h1.size() == h2.size());
     // that given, we can compare directly
     int covered = 0;
@@ -677,6 +678,7 @@ HHGA::HHGA(size_t window_length,
 
     // establish the allele/hap/ref matches
     for (auto& aln : alignments) {
+        if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
         int i = 0;
         auto& weight = matches[&aln];
         for (auto& hap : haplotypes) {
