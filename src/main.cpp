@@ -21,6 +21,7 @@ void printUsage(int argc, char** argv) {
          << "    -m, --multiclass      generate multiclass labels rather than single class assignment [BROKEN]" << endl
          << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
          << "    -s, --show-bases      show all the bases in the alignments instead of R ref match symbol" << endl
+         << "    -a, --assume-ref      set missing sequences in the haps and genotypes to reference" << endl
          << "    -p, --binary-pred-in  stream in binary predictions and write annotated VCF" << endl
          << "    -G, --gt-pred-in      stream in class predictions and write annotated VCF" << endl
          << "    -S, --sample NAME     name of the sample in the output VCF (use with --gt-class)" << endl
@@ -46,7 +47,7 @@ int main(int argc, char** argv) {
     bool debug = false;
     bool exponentiate = false;
     bool show_bases = false;
-    bool assume_ref = true; // assume haps are ref when not given
+    bool assume_ref = false; // assume haps are ref when not given
     bool binary_predictions_in = false;
     bool genotype_predictions_in = false;
     string gt_class;
@@ -72,6 +73,7 @@ int main(int argc, char** argv) {
             {"window-size", required_argument, 0, 'w'},
             {"exponentiate", no_argument, 0, 'e'},
             {"show-bases", no_argument, 0, 's'},
+            {"assume-ref", no_argument, 0, 'a'},
             {"bin-pred-in", no_argument, 0, 'p'},
             {"gt-pred-in", no_argument, 0, 'G'},
             {"sample-name", required_argument, 0, 'S'},
@@ -82,7 +84,7 @@ int main(int argc, char** argv) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg:S:Gm",
+        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg:S:Gma",
                          long_options, &option_index);
 
         if (c == -1)
@@ -142,6 +144,10 @@ int main(int argc, char** argv) {
 
         case 's':
             show_bases = true;
+            break;
+
+        case 'a':
+            assume_ref = true;
             break;
 
         case 'p':
