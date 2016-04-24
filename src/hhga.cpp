@@ -165,19 +165,34 @@ string label_for_genotype(const string& gt) {
     }
 }
 
-string genotype_for_label(const string& gt, bool incl_ref) {
+string genotype_for_label(const string& gt, int alt_count) {
     if        (gt == "1") {
         return "0/0";
     } else if (gt == "2") {
         return "0/1";
     } else if (gt == "3") {
-        return "0/2";
+        if (alt_count > 1) {
+            return "0/2";
+        } else {
+            // emit a valid het if we don't have 2 alts
+            return "0/1";
+        }
     } else if (gt == "4") {
         return "1/1";
     } else if (gt == "5") {
-        return "1/2";
+        if (alt_count > 1) {
+            return "1/2";
+        } else {
+            // emit a valid het if we don't have 2 alts
+            return "0/1";
+        }
     } else if (gt == "6") {
-        return "2/2";
+        if (alt_count > 1) {
+            return "2/2";
+        } else {
+            // emit a valid hom if we don't have 2 alts
+            return "1/1";
+        }
     } else {
         //cerr << "warning: unknown genotype '" << gt << "'" << " expected one of 0/0, 0/1, 0/2, 1/1, 1/2, 2/2" << endl;
         return "./.";

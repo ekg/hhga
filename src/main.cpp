@@ -242,7 +242,8 @@ int main(int argc, char** argv) {
             var.info["prediction"].push_back(convert(prediction));
             if (genotype_predictions_in) {
                 var.samples[sample_name]["GT"].clear();
-                var.samples[sample_name]["GT"].push_back(genotype_for_label(prediction, incl_ref));
+                var.samples[sample_name]["GT"].push_back(
+                    genotype_for_label(prediction, var.alt.size()));
                 var.format.push_back("GT");
             }
             cout << var << endl;
