@@ -102,7 +102,9 @@ public:
     
     // the feature model
     vector<allele_t> reference;
-    vector<vector<allele_t> > haplotypes; // haps/genotypes
+    vector<vector<allele_t> > haplotypes; // genotypes
+    vector<vector<allele_t> > genotypes; // genotypes
+    map<int, int> sample_id;
     vector<vector<allele_t> > alleles;
     vector<prob_t> mapping_qualities;
     map<string, double> call_info_num; // from input VCFs, numbers

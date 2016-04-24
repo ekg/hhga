@@ -469,26 +469,24 @@ HHGA::HHGA(size_t window_length,
     // for each sample
     // get the genotype
     vector<string> haplotype_seqs;
-    if (!gt_class.empty()) {
-        for (auto& allele : var.alt) {
-            haplotypes.push_back(vhaps[allele]);
-            haplotype_seqs.push_back(allele);
-        }
-    } else {
-        for (auto& s : var.samples) {
-            auto& gtstr = s.second["GT"].front();
-            auto gt = vcflib::decomposeGenotype(gtstr);
-            for (auto& g : gt) {
-                //cerr << g.first << "->" << g.second << endl;
-                // add a haplotype for the allele
-                if (g.first != vcflib::NULL_ALLELE) {
-                    for (size_t i = 0; i < g.second; ++i){
-                        haplotypes.push_back(vhaps[var.alleles[g.first]]);
-                        haplotype_seqs.push_back(var.alleles[g.first]);
-                    }
+    for (auto& allele : var.alt) {
+        haplotypes.push_back(vhaps[allele]);
+        haplotype_seqs.push_back(allele);
+    }
+    vector<string> genotype_seqs;
+    int sid = 0; int gid = 0;
+    for (auto& s : var.samples) {
+        ++sid;
+        auto& gtstr = s.second["GT"].front();
+        auto gt = vcflib::decomposeGenotype(gtstr);
+        for (auto& g : gt) {
+            if (g.first != vcflib::NULL_ALLELE) {
+                for (size_t i = 0; i < g.second; ++i){
+                    genotypes.push_back(vhaps[var.alleles[g.first]]);
+                    sample_id[gid++] = sid;
+                    genotype_seqs.push_back(var.alleles[g.first]);
                 }
             }
-            //cerr << gtstr << endl;
         }
     }
 
@@ -584,6 +582,9 @@ HHGA::HHGA(size_t window_length,
     for (auto& hap : haplotypes) {
         project_positions(hap, pos_proj);
     }
+    for (auto& hap : genotypes) {
+        project_positions(hap, pos_proj);
+    }
 
     // get the min/max of the vector
     // the min should be 0
@@ -612,6 +613,9 @@ HHGA::HHGA(size_t window_length,
     for (auto& hap : haplotypes) {
         hap = pad_alleles(hap, bal_min, bal_max);
     }
+    for (auto& hap : genotypes) {
+        hap = pad_alleles(hap, bal_min, bal_max);
+    }
 
     // optionally force the reference matching alleles to be R
     if (!show_bases) {
@@ -626,8 +630,17 @@ HHGA::HHGA(size_t window_length,
                     if (a->alt == "M") *a = reference[i];
                 }
             }
+            for (auto& hap : genotypes) {
+                size_t i = 0;
+                for (vector<allele_t>::iterator a = hap.begin(); a != hap.end(); ++a, ++i) {
+                    if (a->alt == "M") *a = reference[i];
+                }
+            }
         } else {
             for (auto& hap : haplotypes) {
+                flatten_to_ref(hap);
+            }
+            for (auto& hap : genotypes) {
                 flatten_to_ref(hap);
             }
         }
@@ -737,6 +750,16 @@ const string HHGA::str(void) {
         }
         out << endl;
     }
+    for (auto& hap : genotypes) {
+        out << "geno        ";
+        for (auto& allele : hap) {
+            if (allele.alt == "M") out << " ";
+            else if (allele.alt == "U") out << "-";
+            else if (allele.alt == "R") out << ".";
+            else out << allele.alt;
+        }
+        out << endl;
+    }
 
     size_t i = 0;
     for (auto& aln : alignments) {
@@ -794,6 +817,17 @@ const string HHGA::vw(void) {
         ++i;
         idx = 0;
         for (auto& allele : hap) {
+            out << ++idx << allele.alt << ":" << allele.prob << " ";;
+        }
+    }
+    i = 1;
+    int gid = 0;
+    for (auto& geno : genotypes) {
+        out << "|geno" << i << " ";
+        out << "sample:" << sample_id[gid++] << " ";
+        ++i;
+        idx = 0;
+        for (auto& allele : geno) {
             out << ++idx << allele.alt << ":" << allele.prob << " ";;
         }
     }
