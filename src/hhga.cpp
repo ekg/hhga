@@ -762,14 +762,12 @@ vector<allele_t> HHGA::pad_alleles(vector<allele_t> aln_alleles,
                                    pos_t bal_min, pos_t bal_max) {
     vector<allele_t> padded;
     // remove the bits outside the window
-    /*
     aln_alleles.erase(std::remove_if(aln_alleles.begin(), aln_alleles.end(),
                                      [&](const allele_t& allele) {
-                                         return allele.position < bal_min || allele.position >= bal_max;
+                                         return allele.position < bal_min;
                                      }),
                       aln_alleles.end());
     if (aln_alleles.empty()) return padded;
-    */
     /*
     cerr << "pre:    ";
     for (auto& a : aln_alleles) cerr << a << " ";
