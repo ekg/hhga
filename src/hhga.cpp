@@ -787,6 +787,7 @@ vector<allele_t> HHGA::pad_alleles(vector<allele_t> aln_alleles,
     // pad the sides
     pos_t aln_start = aln_alleles.front().position;
     pos_t aln_end = aln_alleles.back().position;
+    if (aln_start > bal_max) return padded;
     // pad the beginning with "missing" features
     for (int32_t q = bal_min; q != aln_start; ++q) {
         padded.push_back(allele_t("", "M", q, 1));
