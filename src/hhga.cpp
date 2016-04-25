@@ -484,9 +484,11 @@ HHGA::HHGA(size_t window_length,
             } else {
                 // cluster insertions behind the previous base
                 if (a.ref.empty()) {
-                    valleles.push_back(allele_t(a.ref,
-                                                a.alt,
-                                                a.position-1, 1));
+                    for (size_t i = 0; i < a.alt.size(); ++i) {
+                        valleles.push_back(allele_t("U",
+                                                    a.alt.substr(i,1),
+                                                    a.position-2, 1));
+                    }
                 } else if (a.alt.empty()) {
                     // deletions get broken into individual bases
                     for (size_t i = 0; i < a.ref.size(); ++i) {
@@ -646,7 +648,9 @@ HHGA::HHGA(size_t window_length,
         if (a->second.empty()) to_erase.push_back(a->first);
     }
     for (auto e : to_erase) alignment_alleles.erase(e);
+
     reference = pad_alleles(reference, bal_min, bal_max);
+    
     for (auto& hap : haplotypes) {
         hap = pad_alleles(hap, bal_min, bal_max);
     }
@@ -654,7 +658,6 @@ HHGA::HHGA(size_t window_length,
         hap = pad_alleles(hap, bal_min, bal_max);
     }
 
-    // replace that empty allele with ref allele at same position
     if (assume_ref) {
         for (auto& hap : haplotypes) {
             size_t i = 0;
@@ -759,12 +762,14 @@ vector<allele_t> HHGA::pad_alleles(vector<allele_t> aln_alleles,
                                    pos_t bal_min, pos_t bal_max) {
     vector<allele_t> padded;
     // remove the bits outside the window
+    /*
     aln_alleles.erase(std::remove_if(aln_alleles.begin(), aln_alleles.end(),
                                      [&](const allele_t& allele) {
                                          return allele.position < bal_min || allele.position >= bal_max;
                                      }),
                       aln_alleles.end());
     if (aln_alleles.empty()) return padded;
+    */
     /*
     cerr << "pre:    ";
     for (auto& a : aln_alleles) cerr << a << " ";
@@ -795,6 +800,14 @@ vector<allele_t> HHGA::pad_alleles(vector<allele_t> aln_alleles,
     for (int32_t q = aln_end+1; q < bal_max; ++q) {
         padded.push_back(allele_t("", "M", q, 1));
     }
+
+    padded.erase(std::remove_if(padded.begin(), padded.end(),
+                                [&](const allele_t& allele) {
+                                    return allele.position < bal_min || allele.position >= bal_max;
+                                }),
+                      padded.end());
+    //if (aln_alleles.empty()) return padded;
+    
     /*
     cerr << "padded: ";
     for (auto& a : padded) cerr << a << " ";
