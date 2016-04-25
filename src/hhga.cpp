@@ -272,6 +272,7 @@ double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2)
     int covered = 0;
     for (auto& p : p1) {
         auto a1 = p1[p.first]->alt;
+        if (p2.find(p.first) == p2.end()) continue;
         auto a2 = p2[p.first]->alt;
         if (a1 == "M" || a2 == "M") continue;
         ++covered;
