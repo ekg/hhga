@@ -289,6 +289,15 @@ int missing_count(const vector<allele_t>& hap) {
     return m;
 }
 
+void HHGA::missing_to_ref(vector<vector<allele_t> >& obs) {
+    for (auto& hap : obs) {
+        size_t i = 0;
+        for (vector<allele_t>::iterator a = hap.begin(); a != hap.end(); ++a, ++i) {
+            if (a->alt == "M") *a = reference[i];
+        }
+    }
+}
+
 HHGA::HHGA(size_t window_length,
            BamTools::BamMultiReader& bam_reader,
            FastaReference& fasta_ref,
@@ -468,6 +477,10 @@ HHGA::HHGA(size_t window_length,
         vref.push_back(allele_t(base, base, var.position-1 + i, 1));
     }
     */
+    int max_haplotype_length = 0;
+    for (auto& allele : var.alleles) {
+        max_haplotype_length = max((int)allele.size(), max_haplotype_length);
+    }
 
     // handle out input haplotypes
     // note that parsedalternates is giving us 1-based positions
@@ -503,8 +516,14 @@ HHGA::HHGA(size_t window_length,
                 }
             }
         }
+        while (valleles.size() < max_haplotype_length) {
+            valleles.push_back(allele_t("",
+                                        "U",
+                                        valleles.back().position,
+                                        1));
+        }
     }
-    
+
     // for each sample
     // get the genotype
     vector<string> haplotype_seqs;
@@ -659,18 +678,10 @@ HHGA::HHGA(size_t window_length,
     }
 
     if (assume_ref) {
-        for (auto& hap : haplotypes) {
-            size_t i = 0;
-            for (vector<allele_t>::iterator a = hap.begin(); a != hap.end(); ++a, ++i) {
-                if (a->alt == "M") *a = reference[i];
-            }
-        }
-        for (auto& hap : genotypes) {
-            size_t i = 0;
-            for (vector<allele_t>::iterator a = hap.begin(); a != hap.end(); ++a, ++i) {
-                if (a->alt == "M") *a = reference[i];
-            }
-        }
+        // determine limits
+        // and pad within them
+        missing_to_ref(haplotypes);
+        missing_to_ref(genotypes);
     }
 
     // optionally force the reference matching alleles to be R
