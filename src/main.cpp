@@ -203,49 +203,53 @@ int main(int argc, char** argv) {
         // stream in predictions, use the annotation we apply to the vw input
         // to reconstruct a VCF file with our model's predictions as an INFO field
         for (std::string line; std::getline(std::cin, line); ) {
-            auto fields = split_delims(line, " \t");
-            // we want the second field
-            auto& prediction = fields[0];
-            auto comment = fields[1];
-            // strip off the leading ' if present
-            if (comment.find("'") != string::npos) {
-                comment = comment.substr(1);
-            }
-            auto vcf_fields = split_delims(comment, "_");
-            auto& seqname = vcf_fields[0];
-            auto pos = stol(vcf_fields[1].c_str());
-            auto& ref = vcf_fields[2];
-            auto haps = split_delims(vcf_fields[3], ",");
-
-            vcflib::Variant var(vcf_file);
-            var.sequenceName = seqname;
-            var.position = pos;
-            var.quality = 0;
-            var.ref = ref;
-
-            set<string> alleles;
-            alleles.insert(ref);
-            for (auto& hap : haps) {
-                alleles.insert(hap);
-            }
-
-            for (auto& alt : haps) {
-                if (alt != var.ref) {
-                    var.alt.push_back(alt);
+            try {
+                auto fields = split_delims(line, " \t");
+                // we want the second field
+                auto& prediction = fields[0];
+                auto comment = fields[1];
+                // strip off the leading ' if present
+                if (comment.find("'") != string::npos) {
+                    comment = comment.substr(1);
                 }
-            }
-            if (var.alt.empty()) continue;
+                auto vcf_fields = split_delims(comment, "_");
+                auto& seqname = vcf_fields[0];
+                auto pos = stol(vcf_fields[1].c_str());
+                auto& ref = vcf_fields[2];
+                auto haps = split_delims(vcf_fields[3], ",");
 
-            var.id = ".";
-            var.filter = ".";
-            var.info["prediction"].push_back(convert(prediction));
-            if (genotype_predictions_in) {
-                var.samples[sample_name]["GT"].clear();
-                var.samples[sample_name]["GT"].push_back(
-                    genotype_for_label(prediction, var.alt.size()));
-                var.format.push_back("GT");
+                vcflib::Variant var(vcf_file);
+                var.sequenceName = seqname;
+                var.position = pos;
+                var.quality = 0;
+                var.ref = ref;
+
+                set<string> alleles;
+                alleles.insert(ref);
+                for (auto& hap : haps) {
+                    alleles.insert(hap);
+                }
+
+                for (auto& alt : haps) {
+                    if (alt != var.ref) {
+                        var.alt.push_back(alt);
+                    }
+                }
+                if (var.alt.empty()) continue;
+
+                var.id = ".";
+                var.filter = ".";
+                var.info["prediction"].push_back(convert(prediction));
+                if (genotype_predictions_in) {
+                    var.samples[sample_name]["GT"].clear();
+                    var.samples[sample_name]["GT"].push_back(
+                        genotype_for_label(prediction, var.alt.size()));
+                    var.format.push_back("GT");
+                }
+                cout << var << endl;
+            } catch (...) {
+                cerr << "hhga: error on line -- " << line << endl;
             }
-            cout << var << endl;
         }
         return 0;
     }
