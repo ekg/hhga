@@ -811,6 +811,11 @@ vector<allele_t> HHGA::pad_alleles(vector<allele_t> aln_alleles,
         padded.push_back(allele_t("", "M", q, 1));
     }
 
+    int i = padded.front().position;
+    for (auto& p : padded) {
+        p.position = i++;
+    }
+
     padded.erase(std::remove_if(padded.begin(), padded.end(),
                                 [&](const allele_t& allele) {
                                     return allele.position < bal_min || allele.position >= bal_max;
