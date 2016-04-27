@@ -94,87 +94,7 @@ SodqFxYPZI                                 . 0.0 0.0 60 chr22.bin8.cram:166:8424
 AC_1:1.0 QUAL:359.9 
 ```    
 
-We use six symbols to encode the MSA, `{ A, T, G, C, N, U, M, R, S }`, where:
-
-* `A`, `T`, `G`, and `C` are DNA bases (by default only used in `|ref`)
-* `N` is the degenerate symbol representing lack of information of actual base but knowledge of sequence length
-* `U` is a gap symbol required to normalize the MSA into a matrix
-* `M` is a symbol indicating if we don't have any information at the position in the MSA
-* `R` to indicate when a base is the same as the reference base.
-** This reduces the feature complexity of the model and helps performance. We further extend this to one specific symbol for each position in the matrix. So the reference-matching base at position 23 is always `23R`.
-* `S` represents soft clips
-
-`U`, and `M` always have weight 1. Reference bases always have weight 1. Bases in the alignments have weights based on their phred scores. The weight of `S` features is the length of the soft clip.
-
-Various features of the reads are represented in other namespaces.
-
 The feature space transformation of this site would be given by `hhga -b minigiab/9251-9252.bam -f minigiab/q.fa -v minigiab/h.vcf.gz -r q:9251-9252 -w 20 -c 1`. The output will come on a single line.
-
-```txt
-q_9251_GTTCT_G
-reference   AGAAAGATTGTGCCAAGTTCTTTCTTTTTCAG
-hap                         .....           
-hap                         .----           
-geno                        .....           
-geno                        .----           
-SodqFxYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8398
-SodqFxYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8321
-SodqfXYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8350
-SodqFxYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8354
-sOdqfXYPZI  .................----...G....... 0.2 1.0 60 chr22.bin8.cram:166:8443
-SodqfXYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8392
-sOdqFxYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8446
-sOdqfXYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8447
-sOdqfXYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8448
-sOdqfXYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8449
-sOdqFxYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8450
-sOdqFxYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8451
-SodqfXYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8393
-SodqFxYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8448
-SodqFxYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8394
-sOdqFxYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8455
-SodqFxYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8390
-sOdqFxYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8457
-SodqFxYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8436
-SodqfXYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8400
-sOdqfXYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8460
-sOdqfXYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8461
-sOdqfXYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8462
-SodqfXYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8428
-sOdqfXYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8464
-SodqFxYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8420
-SodqfXYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8426
-SodqfXYPZI  ........................A..C.... 1.0 0.2 60 chr22.bin8.cram:166:8364
-SodqfXYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8379
-SodqFxYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8461
-SodqFxYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8415
-SodqfXYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8372
-SodqfXYPZI  ................................ 1.0 0.2 60 chr22.bin8.cram:166:8407
-SodqfXYPZI  .................----........... 0.2 1.0 60 chr22.bin8.cram:166:8421
-SodqFxYPZI  ...............................  1.0 0.2 60 chr22.bin8.cram:166:8377
-sOdqfXYPZI     ............................. 1.0 0.2 60 chr22.bin8.cram:166:8474
-SodqfXYPZI  ..........................       1.0 0.2 60 chr22.bin8.cram:166:8408
-sOdqfXYPZI  ........................         1.0 0.2 60 chr22.bin8.cram:166:8436
-SodqfXYPZI  .....................            1.0 0.2 60 chr22.bin8.cram:166:8361
-sOdqfXYPZI             ..................... 1.0 0.2 60 chr22.bin8.cram:166:8475
-SodqFxYPZI  ....................             0.8 0.2 60 chr22.bin8.cram:166:8341
-sOdqFxYPZI  ...................              0.6 0.2 60 chr22.bin8.cram:166:8434
-SodqFxYPZI                      G........... 0.0 0.0 60 chr22.bin8.cram:166:8432
-SodqfXYPZI                      ............ 0.2 0.0 60 chr22.bin8.cram:166:8427
-sOdqfXYPZI                      S........... 0.0 0.0 60 chr22.bin8.cram:166:8478
-sOdqFxYPZI                      S........... 0.0 0.0 60 chr22.bin8.cram:166:8479
-SodqFxYPZI                      S........... 0.0 0.0 60 chr22.bin8.cram:166:8443
-SodqfXYPZI  ...........                      0.0 0.0 60 chr22.bin8.cram:166:8410
-SodqfXYPZI  ...........                      0.0 0.0 60 chr22.bin8.cram:166:8409
-SodqFxYPZI                         ......... 0.0 0.0 60 chr22.bin8.cram:166:8395
-SodqfXYPZI  ........                         0.0 0.0 60 chr22.bin8.cram:166:8383
-sOdqFxYPZI                          ........ 0.0 0.0 60 chr22.bin8.cram:166:8482
-sOdqFxYPZI  .......                          0.0 0.0 60 chr22.bin8.cram:166:8428
-sOdqFxYPZI  .                                0.0 0.0 60 chr22.bin8.cram:166:8427
-SodqFxYPZI                                 . 0.0 0.0 60 chr22.bin8.cram:166:8424
-AC_1:1.0 QUAL:359.9 
-
-```
 
 For debugging we can pipe the hhga format output through `sed s/\|/\\n\|/g | column -t` to convert the spaces into newlines and columnarize the fields.
 
@@ -354,6 +274,20 @@ For debugging we can pipe the hhga format output through `sed s/\|/\\n\|/g | col
 
 ```
 
+We use six symbols to encode the MSA, `{ A, T, G, C, N, U, M, R, S }`, where:
+
+* `A`, `T`, `G`, and `C` are DNA bases (by default only used in `|ref`)
+* `N` is the degenerate symbol representing lack of information of actual base but knowledge of sequence length
+* `U` is a gap symbol required to normalize the MSA into a matrix
+* `M` is a symbol indicating if we don't have any information at the position in the MSA
+* `R` to indicate when a base is the same as the reference base.
+** This reduces the feature complexity of the model and helps performance. We further extend this to one specific symbol for each position in the matrix. So the reference-matching base at position 23 is always `23R`.
+* `S` represents soft clips
+
+`U`, and `M` always have weight 1. Reference bases always have weight 1. Bases in the alignments have weights based on their phred scores. The weight of `S` features is the length of the soft clip.
+
+Various features of the reads are represented in other namespaces.
+    
 The first entry in the line defines the class of the example. By convention, we say the example is 1 if the haplotypes are correct, and -1 otherwise.
 
 * `ref` : the reference
