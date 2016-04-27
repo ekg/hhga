@@ -305,6 +305,7 @@ HHGA::HHGA(size_t window_length,
            const string& input_name,
            const string& class_label,
            const string& gt_class,
+           int max_depth,
            bool multiclass,
            bool expon,
            bool show_bases,
@@ -734,6 +735,10 @@ HHGA::HHGA(size_t window_length,
                       return false;
                   }
               });
+    // now remove things above our max depth
+    if (max_depth && ordered_alignments.size() > max_depth) {
+        ordered_alignments.erase(ordered_alignments.begin() + max_depth, ordered_alignments.end());
+    }
 
     // make the label that represents our hhga site
     // and which we will later use to project back into VCF

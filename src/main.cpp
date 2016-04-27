@@ -20,6 +20,7 @@ void printUsage(int argc, char** argv) {
          << "    -g, --gt-class FIELD  use this sample field to make genotype class labels" << endl
          << "    -m, --multiclass      generate multiclass labels rather than single class assignment [BROKEN]" << endl
          << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
+         << "    -x, --max-depth N     if depth is over N, downsample to N" << endl
          << "    -s, --show-bases      show all the bases in the alignments instead of R ref match symbol" << endl
          << "    -a, --assume-ref      set missing sequences in the haps and genotypes to reference" << endl
          << "    -p, --binary-pred-in  stream in binary predictions and write annotated VCF" << endl
@@ -53,6 +54,7 @@ int main(int argc, char** argv) {
     string gt_class;
     bool multiclass = false;
     string sample_name;
+    int max_depth = 0;
 
     // parse command-line options
     int c;
@@ -78,13 +80,14 @@ int main(int argc, char** argv) {
             {"gt-pred-in", no_argument, 0, 'G'},
             {"sample-name", required_argument, 0, 'S'},
             {"multiclass", required_argument, 0, 'm'},
+            {"max-depth", required_argument, 0, 'x'},
             {"debug", no_argument, 0, 'd'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg:S:Gma",
+        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg:S:Gmax:",
                          long_options, &option_index);
 
         if (c == -1)
@@ -160,6 +163,10 @@ int main(int argc, char** argv) {
 
         case 'm':
             multiclass = true;
+            break;
+
+        case 'x':
+            max_depth = atoi(optarg);
             break;
 
         case 'S':
@@ -299,6 +306,7 @@ int main(int argc, char** argv) {
                   vcf_feature_prefix,
                   class_label,
                   gt_class,
+                  max_depth,
                   multiclass,
                   exponentiate,
                   show_bases,

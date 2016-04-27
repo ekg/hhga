@@ -106,7 +106,7 @@ public:
 
     // do we express things in exponentiated or phred form
     bool exponentiate;
-    
+
     // the feature model
     vector<allele_t> reference;
     vector<vector<allele_t> > haplotypes; // genotypes
@@ -133,6 +133,7 @@ public:
          const string& input_name,
          const string& class_label,
          const string& gt_class,
+         int max_depth = 0,
          bool multiclass = false,
          bool expon = false,
          bool show_bases = false,
