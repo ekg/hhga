@@ -712,33 +712,59 @@ HHGA::HHGA(size_t window_length,
         }
     }
 
-    // sort the alignments by the fraction of match and then by position
-    // TODO record an alignment sort order
-    // and use it on output
+    auto aln_sort = [&](alignment_t* a1, alignment_t* a2) {
+        auto& h1 = alignment_alleles[a1];
+        auto& h2 = alignment_alleles[a2];
+        auto m1 = missing_count(h1);
+        auto m2 = missing_count(h2);
+        if (m1 < m2) {
+            return true;
+        } else if (m1 == m2) {
+            return a1->Position < a2->Position;
+        } else {
+            return false;
+        }
+    };
+
     for (auto& aln : alignments) {
         if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
         ordered_alignments.push_back(&aln);
     }
-    // sort by mismatch count
-    // then by position
-    std::sort(ordered_alignments.begin(), ordered_alignments.end(),
-              [&](alignment_t* a1, alignment_t* a2) {
-                  auto& h1 = alignment_alleles[a1];
-                  auto& h2 = alignment_alleles[a2];
-                  auto m1 = missing_count(h1);
-                  auto m2 = missing_count(h2);
-                  if (m1 < m2) {
-                      return true;
-                  } else if (m1 == m2) {
-                      return a1->Position < a2->Position;
-                  } else {
-                      return false;
-                  }
-              });
-    // now remove things above our max depth
+    std::sort(ordered_alignments.begin(),
+              ordered_alignments.end(),
+              aln_sort);
+
     if (max_depth && ordered_alignments.size() > max_depth) {
-        ordered_alignments.erase(ordered_alignments.begin() + max_depth, ordered_alignments.end());
+        ordered_alignments.erase(ordered_alignments.begin() + max_depth,
+                                 ordered_alignments.end());
     }
+    
+    // collect allele supports
+    for (auto& aln : alignments) {
+        if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        // use all the best supports
+        map<double, vector<int> > bests;
+        for (int i = 0; i < haplotypes.size(); ++i) {
+            bests[matches[&aln][i]].push_back(i);
+        }
+        for (auto i : bests.begin()->second) {
+            allele_support[i][matches[&aln][i]].push_back(&aln);
+        }
+    }
+    for (auto& supp : allele_support) {
+        for (auto& hsup : supp.second) {
+            auto& sup = hsup.second;
+            // sort it baby
+            std::sort(sup.begin(), sup.end(), aln_sort);
+            // prep for output
+            if (max_depth && sup.size() > max_depth) {
+                sup.erase(sup.begin() + max_depth, sup.end());
+            }
+        }
+    }
+
+    // collect soft clips
+    
 
     // make the label that represents our hhga site
     // and which we will later use to project back into VCF
@@ -871,35 +897,62 @@ const string HHGA::str(void) {
     }
 
     size_t i = 0;
-    for (auto a : ordered_alignments) {
-        auto& aln = *a;
-        // print out the stuff
-        if (aln.IsReverseStrand())     out << "S"; else out << "s";
-        if (aln.IsMateReverseStrand()) out << "O"; else out << "o";
-        if (aln.IsDuplicate())         out << "D"; else out << "d";
-        if (aln.IsFailedQC())          out << "Q"; else out << "q";
-        if (aln.IsFirstMate())         out << "F"; else out << "f";
-        if (aln.IsSecondMate())        out << "X"; else out << "x";
-        if (aln.IsMateMapped())        out << "Y"; else out << "y";
-        if (aln.IsPaired())            out << "P"; else out << "p";
-        if (aln.IsPrimaryAlignment())  out << "Z"; else out << "z";
-        if (aln.IsProperPair())        out << "I"; else out << "i";
-        out << "  ";
-        for (auto& allele : alignment_alleles[&aln]) {
-            if (allele.alt == "M") out << " ";
-            else if (allele.alt == "U") out << "-";
-            else if (allele.alt == "R") out << ".";
-            else out << allele.alt;
+    
+
+    int s = 0;
+    for (auto& supp : allele_support) {
+        
+        for (auto& hsup : supp.second) {
+            auto& sup = hsup.second;
+            int j = 0;
+            for (auto& aln : sup) {
+                // print out the stuff
+                if (aln->IsReverseStrand())     out << "S"; else out << "s";
+                if (aln->IsMateReverseStrand()) out << "O"; else out << "o";
+                if (aln->IsDuplicate())         out << "D"; else out << "d";
+                if (aln->IsFailedQC())          out << "Q"; else out << "q";
+                if (aln->IsFirstMate())         out << "F"; else out << "f";
+                if (aln->IsSecondMate())        out << "X"; else out << "x";
+                if (aln->IsMateMapped())        out << "Y"; else out << "y";
+                if (aln->IsPaired())            out << "P"; else out << "p";
+                if (aln->IsPrimaryAlignment())  out << "Z"; else out << "z";
+                if (aln->IsProperPair())        out << "I"; else out << "i";
+                out << "  ";
+                for (auto& allele : alignment_alleles[aln]) {
+                    if (allele.alt == "M") out << " ";
+                    else if (allele.alt == "U") out << "-";
+                    else if (allele.alt == "R") out << ".";
+                    else out << allele.alt;
+                }
+                // the grouping
+                out << " " << s <<  "." << j++;
+
+                // now the matches
+                out << "\t";
+                for (auto w : matches[aln]) {
+                    out << w.second << " ";
+                }
+                out << aln->MapQuality;
+                out << " " << aln->Name;
+                out << endl;
+
+                /*
+                out << "  sup" << s <<  "." << j++ << " ";
+                for (auto& allele : alignment_alleles[aln]) {
+                    if (allele.alt == "M") out << " ";
+                    else if (allele.alt == "U") out << "-";
+                    else if (allele.alt == "R") out << ".";
+                    else out << allele.alt;
+                }
+                out << endl;
+                */
+            }
         }
-        // now the matches
-        out << " ";
-        for (auto w : matches[&aln]) {
-            out << w.second << " ";
+        if (s < 9) {
+            ++s;
         }
-        out << aln.MapQuality;
-        out << " " << aln.Name;
-        out << endl;
     }
+
     // now handle caller input features
     for (auto& f : call_info_num) {
         out << f.first << ":" << f.second << " ";
@@ -907,6 +960,7 @@ const string HHGA::str(void) {
     for (auto& f : call_info_str) {
         out << f.first << ":" << f.second << " ";
     }
+    out << endl;
     
     return out.str();
 }
@@ -994,6 +1048,10 @@ const string HHGA::vw(void) {
     for (auto& f : call_info_num) {
         out << f.first << ":" << f.second << " ";
     }
+
+    // and the alignment supports
+    
+    
     /*
     for (auto& f : call_info_str) {
         out << f.first << "_" << f.second << " ";

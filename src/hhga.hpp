@@ -100,6 +100,8 @@ public:
     map<alignment_t*, vector<allele_t> > alignment_alleles;
     map<alignment_t*, map<int, double> > matches;
     vector<alignment_t*> ordered_alignments;
+    map<int, map<double, vector<alignment_t*> > > allele_support;
+    map<int, vector<alignment_t*> > allele_examples; // same as support but limited number
 
     // the class label for the example
     string label;
