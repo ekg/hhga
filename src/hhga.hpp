@@ -102,6 +102,7 @@ public:
     vector<alignment_t*> ordered_alignments;
     map<int, map<double, vector<alignment_t*> > > allele_support;
     map<int, vector<alignment_t*> > allele_examples; // same as support but limited number
+    vector<alignment_t*> softclipped;
 
     // the class label for the example
     string label;

@@ -283,6 +283,13 @@ double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2)
     return (possible ? (double) count / (double) possible : 0);
 }
 
+bool has_softclip(const vector<allele_t>& aln_alleles) {
+    for (auto& allele : aln_alleles) {
+        if (allele.alt == "S") return true;
+    }
+    return false;
+}
+
 int missing_count(const vector<allele_t>& hap) {
     int m = 0;
     for (auto& a : hap) if (a.alt == "M") ++m;
@@ -764,8 +771,18 @@ HHGA::HHGA(size_t window_length,
     }
 
     // collect soft clips
+    //vector<alignment_t*> softclipped;
+    for (auto& aln : alignments) {
+        if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        // if we have a softclip
+        if (has_softclip(alignment_alleles[&aln])) {
+            softclipped.push_back(&aln);
+        }
+    }
+    std::sort(ordered_alignments.begin(),
+              ordered_alignments.end(),
+              aln_sort);
     
-
     // make the label that represents our hhga site
     // and which we will later use to project back into VCF
     stringstream vrep;
@@ -897,61 +914,58 @@ const string HHGA::str(void) {
     }
 
     size_t i = 0;
-    
 
+
+    int j = 0;
     int s = 0;
+
+    auto write_aln = [&](alignment_t* aln) 
+        {
+            // print out the stuff
+            if (aln->IsReverseStrand())     out << "S"; else out << "s";
+            if (aln->IsMateReverseStrand()) out << "O"; else out << "o";
+            if (aln->IsDuplicate())         out << "D"; else out << "d";
+            if (aln->IsFailedQC())          out << "Q"; else out << "q";
+            if (aln->IsFirstMate())         out << "F"; else out << "f";
+            if (aln->IsSecondMate())        out << "X"; else out << "x";
+            if (aln->IsMateMapped())        out << "Y"; else out << "y";
+            if (aln->IsPaired())            out << "P"; else out << "p";
+            if (aln->IsPrimaryAlignment())  out << "Z"; else out << "z";
+            if (aln->IsProperPair())        out << "I"; else out << "i";
+            out << "  ";
+            for (auto& allele : alignment_alleles[aln]) {
+                if (allele.alt == "M") out << " ";
+                else if (allele.alt == "U") out << "-";
+                else if (allele.alt == "R") out << ".";
+                else out << allele.alt;
+            }
+            // the grouping
+            out << " " << s <<  "." << j++;
+
+            // now the matches
+            out << "\t";
+            for (auto w : matches[aln]) {
+                out << w.second << " ";
+            }
+            out << aln->MapQuality;
+            out << " " << aln->Name;
+            out << endl;
+        };
+
     for (auto& supp : allele_support) {
-        
         for (auto& hsup : supp.second) {
             auto& sup = hsup.second;
-            int j = 0;
-            for (auto& aln : sup) {
-                // print out the stuff
-                if (aln->IsReverseStrand())     out << "S"; else out << "s";
-                if (aln->IsMateReverseStrand()) out << "O"; else out << "o";
-                if (aln->IsDuplicate())         out << "D"; else out << "d";
-                if (aln->IsFailedQC())          out << "Q"; else out << "q";
-                if (aln->IsFirstMate())         out << "F"; else out << "f";
-                if (aln->IsSecondMate())        out << "X"; else out << "x";
-                if (aln->IsMateMapped())        out << "Y"; else out << "y";
-                if (aln->IsPaired())            out << "P"; else out << "p";
-                if (aln->IsPrimaryAlignment())  out << "Z"; else out << "z";
-                if (aln->IsProperPair())        out << "I"; else out << "i";
-                out << "  ";
-                for (auto& allele : alignment_alleles[aln]) {
-                    if (allele.alt == "M") out << " ";
-                    else if (allele.alt == "U") out << "-";
-                    else if (allele.alt == "R") out << ".";
-                    else out << allele.alt;
-                }
-                // the grouping
-                out << " " << s <<  "." << j++;
-
-                // now the matches
-                out << "\t";
-                for (auto w : matches[aln]) {
-                    out << w.second << " ";
-                }
-                out << aln->MapQuality;
-                out << " " << aln->Name;
-                out << endl;
-
-                /*
-                out << "  sup" << s <<  "." << j++ << " ";
-                for (auto& allele : alignment_alleles[aln]) {
-                    if (allele.alt == "M") out << " ";
-                    else if (allele.alt == "U") out << "-";
-                    else if (allele.alt == "R") out << ".";
-                    else out << allele.alt;
-                }
-                out << endl;
-                */
-            }
+            j = 0;
+            for (auto& aln : sup) write_aln(aln);
         }
-        if (s < 9) {
+        if (s < 8) {
             ++s;
         }
     }
+    // and the soft clips
+    s = 9;
+    j = 0;
+    for (auto& aln : softclipped) write_aln(aln);
 
     // now handle caller input features
     for (auto& f : call_info_num) {
