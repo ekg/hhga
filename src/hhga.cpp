@@ -339,7 +339,8 @@ HHGA::HHGA(size_t window_length,
     map<int, string> referenceIDToName;
     vector<BamTools::RefData> referenceSequences = bam_reader.GetReferenceData();
     int i = 0;
-    for (BamTools::RefVector::iterator r = referenceSequences.begin(); r != referenceSequences.end(); ++r) {
+    for (BamTools::RefVector::iterator r = referenceSequences.begin();
+         r != referenceSequences.end(); ++r) {
         referenceIDToName[i] = r->RefName;
         ++i;
     }
@@ -593,7 +594,8 @@ HHGA::HHGA(size_t window_length,
         vector<allele_t>& aln_alleles = a->second;
         aln_alleles.erase(std::remove_if(aln_alleles.begin(), aln_alleles.end(),
                                          [&](const allele_t& allele) {
-                                             return allele.position < begin_pos || allele.position >= end_pos;
+                                             return allele.position < begin_pos
+                                                                      || allele.position >= end_pos;
                                          }),
                           aln_alleles.end());
         map<int32_t, size_t> pos_counts;
@@ -742,15 +744,24 @@ HHGA::HHGA(size_t window_length,
         for (int i = 0; i < haplotypes.size(); ++i) {
             bests[matches[&aln][i]].push_back(i);
         }
-        for (auto i : bests.begin()->second) {
-            allele_support[i][matches[&aln][i]].push_back(&aln);
+        if (bests.rbegin()->first) {
+            for (auto i : bests.rbegin ()->second) {
+                allele_support[i][matches[&aln][i]].push_back(&aln);
+            }
+        } else {
+            for (auto i : bests.rbegin ()->second) {
+                // 8 is the magic "extra" namespace
+                allele_support[8][matches[&aln][i]].push_back(&aln);
+            }
         }
     }
+    int x = 0, y = 0;
     for (auto& supp : allele_support) {
         for (auto& hsup : supp.second) {
             auto& sup = hsup.second;
             // sort it baby
             std::sort(sup.begin(), sup.end(), aln_sort);
+            sup.erase(std::unique(sup.begin(), sup.end()), sup.end());
             // prep for output
             if (max_depth && sup.size() > max_depth) {
                 sup.erase(sup.begin() + max_depth, sup.end());
@@ -768,33 +779,33 @@ HHGA::HHGA(size_t window_length,
         }
     }
     std::sort(softclipped.begin(), softclipped.end(), aln_sort);
+    softclipped.erase(std::unique(softclipped.begin(), softclipped.end()),
+                      softclipped.end());
     if (max_depth && softclipped.size() > max_depth) {
         softclipped.erase(softclipped.begin() + max_depth, softclipped.end());
     }
 
-    int s = 0;
     // organize the ordered alignments
     for (auto& supp : allele_support) {
+        j = 0;
         for (auto& hsup : supp.second) {
             auto& sup = hsup.second;
-            j = 0;
             for (auto& aln : sup) {
                 stringstream ss;
-                ss << s <<  "." << j++;
+                // we limit ourselves to only 8 alleles and 1 degenerate ( = 9)
+                ss << min(supp.first, 8) <<  "." << j++;
                 alignment_groups[aln].push_back(ss.str());
                 grouped_alignments.push_back(make_pair(ss.str(), aln));
             }
         }
-        if (s < 8) {
-            ++s;
-        }
     }
+
     // and the soft clips
-    s = 9;
     j = 0;
     for (auto& aln : softclipped) {
         stringstream ss;
-        ss << s <<  "." << j++;
+        // we keep soft clips in the special namespace 9
+        ss << 9 <<  "." << j++;
         alignment_groups[aln].push_back(ss.str());
         grouped_alignments.push_back(make_pair(ss.str(), aln));
     }
