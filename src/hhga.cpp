@@ -733,18 +733,6 @@ HHGA::HHGA(size_t window_length,
         }
     };
 
-    for (auto& aln : alignments) {
-        if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
-        ordered_alignments.push_back(&aln);
-    }
-    std::sort(ordered_alignments.begin(),
-              ordered_alignments.end(),
-              aln_sort);
-
-    if (max_depth && ordered_alignments.size() > max_depth) {
-        ordered_alignments.erase(ordered_alignments.begin() + max_depth,
-                                 ordered_alignments.end());
-    }
     
     // collect allele supports
     for (auto& aln : alignments) {
@@ -779,10 +767,38 @@ HHGA::HHGA(size_t window_length,
             softclipped.push_back(&aln);
         }
     }
-    std::sort(ordered_alignments.begin(),
-              ordered_alignments.end(),
-              aln_sort);
-    
+    std::sort(softclipped.begin(), softclipped.end(), aln_sort);
+    if (max_depth && softclipped.size() > max_depth) {
+        softclipped.erase(softclipped.begin() + max_depth, softclipped.end());
+    }
+
+    int s = 0;
+    // organize the ordered alignments
+    for (auto& supp : allele_support) {
+        for (auto& hsup : supp.second) {
+            auto& sup = hsup.second;
+            j = 0;
+            for (auto& aln : sup) {
+                stringstream ss;
+                ss << s <<  "." << j++;
+                alignment_groups[aln].push_back(ss.str());
+                grouped_alignments.push_back(make_pair(ss.str(), aln));
+            }
+        }
+        if (s < 8) {
+            ++s;
+        }
+    }
+    // and the soft clips
+    s = 9;
+    j = 0;
+    for (auto& aln : softclipped) {
+        stringstream ss;
+        ss << s <<  "." << j++;
+        alignment_groups[aln].push_back(ss.str());
+        grouped_alignments.push_back(make_pair(ss.str(), aln));
+    }
+
     // make the label that represents our hhga site
     // and which we will later use to project back into VCF
     stringstream vrep;
@@ -913,59 +929,40 @@ const string HHGA::str(void) {
         out << endl;
     }
 
-    size_t i = 0;
+    for (auto g : grouped_alignments) {
+        auto& name = g.first;
+        auto& aln = g.second;
 
-
-    int j = 0;
-    int s = 0;
-
-    auto write_aln = [&](alignment_t* aln) 
-        {
-            // print out the stuff
-            if (aln->IsReverseStrand())     out << "S"; else out << "s";
-            if (aln->IsMateReverseStrand()) out << "O"; else out << "o";
-            if (aln->IsDuplicate())         out << "D"; else out << "d";
-            if (aln->IsFailedQC())          out << "Q"; else out << "q";
-            if (aln->IsFirstMate())         out << "F"; else out << "f";
-            if (aln->IsSecondMate())        out << "X"; else out << "x";
-            if (aln->IsMateMapped())        out << "Y"; else out << "y";
-            if (aln->IsPaired())            out << "P"; else out << "p";
-            if (aln->IsPrimaryAlignment())  out << "Z"; else out << "z";
-            if (aln->IsProperPair())        out << "I"; else out << "i";
-            out << "  ";
-            for (auto& allele : alignment_alleles[aln]) {
-                if (allele.alt == "M") out << " ";
-                else if (allele.alt == "U") out << "-";
-                else if (allele.alt == "R") out << ".";
-                else out << allele.alt;
-            }
-            // the grouping
-            out << " " << s <<  "." << j++;
-
-            // now the matches
-            out << "\t";
-            for (auto w : matches[aln]) {
-                out << w.second << " ";
-            }
-            out << aln->MapQuality;
-            out << " " << aln->Name;
-            out << endl;
-        };
-
-    for (auto& supp : allele_support) {
-        for (auto& hsup : supp.second) {
-            auto& sup = hsup.second;
-            j = 0;
-            for (auto& aln : sup) write_aln(aln);
+        // print out the stuff
+        if (aln->IsReverseStrand())     out << "S"; else out << "s";
+        if (aln->IsMateReverseStrand()) out << "O"; else out << "o";
+        if (aln->IsDuplicate())         out << "D"; else out << "d";
+        if (aln->IsFailedQC())          out << "Q"; else out << "q";
+        if (aln->IsFirstMate())         out << "F"; else out << "f";
+        if (aln->IsSecondMate())        out << "X"; else out << "x";
+        if (aln->IsMateMapped())        out << "Y"; else out << "y";
+        if (aln->IsPaired())            out << "P"; else out << "p";
+        if (aln->IsPrimaryAlignment())  out << "Z"; else out << "z";
+        if (aln->IsProperPair())        out << "I"; else out << "i";
+        out << "  ";
+        for (auto& allele : alignment_alleles[aln]) {
+            if (allele.alt == "M") out << " ";
+            else if (allele.alt == "U") out << "-";
+            else if (allele.alt == "R") out << ".";
+            else out << allele.alt;
         }
-        if (s < 8) {
-            ++s;
+        // the grouping
+        out << " " << name;
+
+        // now the matches
+        out << "\t";
+        for (auto w : matches[aln]) {
+            out << w.second << " ";
         }
+        out << aln->MapQuality;
+        out << " " << aln->Name;
+        out << endl;
     }
-    // and the soft clips
-    s = 9;
-    j = 0;
-    for (auto& aln : softclipped) write_aln(aln);
 
     // now handle caller input features
     for (auto& f : call_info_num) {
@@ -1011,50 +1008,37 @@ const string HHGA::vw(void) {
         }
     }
 
-    i = 0;
     // do the alignments
-    for (auto a : ordered_alignments) {
-        auto& aln = *a;
-        auto name = "aln" + std::to_string(i++);
+    i = 0;
+    for (auto g : grouped_alignments) {
+        auto& name = g.first;
+        auto& aln = g.second;
         out << "|" << name << " ";
         // now alleles
         idx = 0;
-        for (auto& allele : alignment_alleles[&aln]) {
+        for (auto& allele : alignment_alleles[aln]) {
             out << ++idx << allele.alt << ":" << allele.prob << " ";
         }
-    }
-
-    i = 0;
-    // do the strands
-    // do the mapping probs
-    for (auto a : ordered_alignments) {
-        auto& aln = *a;
-        out << "|properties" << i++ << " ";
-        if (exponentiate) {
-            out << "mapqual:" << 1-phred2float(min(aln.MapQuality, (uint16_t)60)) << " ";
-        } else {
-            out << "mapqual:" << aln.MapQuality << " ";
-        }
-        // handle flags
-        if (aln.IsReverseStrand())     out << "strand:1"; else out << "strand:0"; out << " ";
-        if (aln.IsMateReverseStrand()) out << "ostrand:1"; else out << "ostrand:0"; out << " ";
-        if (aln.IsDuplicate())         out << "dup:1"; else out << "dup:0"; out << " ";
-        if (aln.IsFailedQC())          out << "qcfail:1"; else out << "qcfail:0"; out << " ";
-        if (aln.IsFirstMate())         out << "fmate:1"; else out << "fmate:0"; out << " ";
-        if (aln.IsSecondMate())        out << "xmate:1"; else out << "xmate:0"; out << " ";
-        if (aln.IsMateMapped())        out << "ymap:1"; else out << "ymap:0"; out << " ";
-        if (aln.IsPaired())            out << "paired:1"; else out << "paired:0"; out << " ";
-        if (aln.IsPrimaryAlignment())  out << "zprimary:1"; else out << "zprimary:0"; out << " ";
-        if (aln.IsProperPair())        out << "iproper:1"; else out << "iproper:0"; out << " ";
-    }
-    
-    i = 0;
-    for (auto a : ordered_alignments) {
-        auto& aln = *a;
-        out << "|match" << i++ << " ";
-        for (auto w : matches[&aln]) {
+        // match properties
+        for (auto w : matches[aln]) {
             out << w.first+1 << "H:" << w.second << " ";
         }
+        if (exponentiate) {
+            out << "mapqual:" << 1-phred2float(min(aln->MapQuality, (uint16_t)60)) << " ";
+        } else {
+            out << "mapqual:" << aln->MapQuality << " ";
+        }
+        // handle flags
+        if (aln->IsReverseStrand())     out << "strand:1"; else out << "strand:0"; out << " ";
+        if (aln->IsMateReverseStrand()) out << "ostrand:1"; else out << "ostrand:0"; out << " ";
+        if (aln->IsDuplicate())         out << "dup:1"; else out << "dup:0"; out << " ";
+        if (aln->IsFailedQC())          out << "qcfail:1"; else out << "qcfail:0"; out << " ";
+        if (aln->IsFirstMate())         out << "fmate:1"; else out << "fmate:0"; out << " ";
+        if (aln->IsSecondMate())        out << "xmate:1"; else out << "xmate:0"; out << " ";
+        if (aln->IsMateMapped())        out << "ymap:1"; else out << "ymap:0"; out << " ";
+        if (aln->IsPaired())            out << "paired:1"; else out << "paired:0"; out << " ";
+        if (aln->IsPrimaryAlignment())  out << "zprimary:1"; else out << "zprimary:0"; out << " ";
+        if (aln->IsProperPair())        out << "iproper:1"; else out << "iproper:0"; out << " ";
     }
 
     out << "|software ";

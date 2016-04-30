@@ -99,10 +99,11 @@ public:
     vector<alignment_t> alignments;
     map<alignment_t*, vector<allele_t> > alignment_alleles;
     map<alignment_t*, map<int, double> > matches;
-    vector<alignment_t*> ordered_alignments;
     map<int, map<double, vector<alignment_t*> > > allele_support;
     map<int, vector<alignment_t*> > allele_examples; // same as support but limited number
     vector<alignment_t*> softclipped;
+    map<alignment_t*, vector<string> > alignment_groups;
+    vector<pair<string, alignment_t*> > grouped_alignments;
 
     // the class label for the example
     string label;
