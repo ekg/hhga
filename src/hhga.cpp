@@ -1009,20 +1009,29 @@ const string HHGA::vw(void) {
     }
 
     // do the alignments
-    i = 0;
     for (auto g : grouped_alignments) {
         auto& name = g.first;
         auto& aln = g.second;
         out << "|" << name << " ";
-        // now alleles
         idx = 0;
         for (auto& allele : alignment_alleles[aln]) {
             out << ++idx << allele.alt << ":" << allele.prob << " ";
         }
+    }
+    for (auto g : grouped_alignments) {
+        auto& name = g.first;
+        auto& aln = g.second;
+        out << "|match" << name << " ";
         // match properties
         for (auto w : matches[aln]) {
             out << w.first+1 << "H:" << w.second << " ";
         }
+    }
+
+    for (auto g : grouped_alignments) {
+        auto& name = g.first;
+        auto& aln = g.second;
+        out << "|properties" << name << " ";
         if (exponentiate) {
             out << "mapqual:" << 1-phred2float(min(aln->MapQuality, (uint16_t)60)) << " ";
         } else {
