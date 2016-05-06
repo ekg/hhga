@@ -1033,11 +1033,10 @@ const string HHGA::vw(void) {
     // tranposed into colum wise
     coln = 0;
     for (auto& allele : reference) { //this coud just be the lenght not sure where to get it from
-        out << "|col" << col << " ";
-        allele = alignment_alleles[coln]
-            auto& alnn = g.first;
-            auto& aln = g.second;
-                out << allele.alt << ":" << allele.prob << " ";
+        out << "|col" << coln << " ";
+        for (auto g : grouped_alignments) {
+            allele = alignment_alleles[coln]
+            out << allele.alt << ":" << allele.prob << " ";
         }
         ++coln;
     }
