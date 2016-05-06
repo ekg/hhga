@@ -1019,16 +1019,29 @@ const string HHGA::vw(void) {
         }
     }
 
-    // do the alignments
+    // do the row wise alignment features
     for (auto g : grouped_alignments) {
         auto& name = g.first;
         auto& aln = g.second;
-        out << "|" << name << " ";
+        out << "|aln" << name << " ";
         idx = 0;
         for (auto& allele : alignment_alleles[aln]) {
             out << ++idx << allele.alt << ":" << allele.prob << " ";
         }
     }
+
+    // tranposed into colum wise
+    coln = 0;
+    for (auto& allele : reference) { //this coud just be the lenght not sure where to get it from
+        out << "|col" << col << " ";
+        allele = alignment_alleles[coln]
+            auto& alnn = g.first;
+            auto& aln = g.second;
+                out << allele.alt << ":" << allele.prob << " ";
+        }
+        ++coln;
+    }
+    
     for (auto g : grouped_alignments) {
         auto& name = g.first;
         auto& aln = g.second;
