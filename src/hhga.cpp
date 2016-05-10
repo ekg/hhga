@@ -745,13 +745,13 @@ HHGA::HHGA(size_t window_length,
             bests[matches[&aln][i]].push_back(i);
         }
         if (bests.rbegin()->first) {
-            for (auto i : bests.rbegin ()->second) {
-                allele_support[i][matches[&aln][i]].push_back(&aln);
+            for (auto i : bests.rbegin()->second) {
+                allele_support[i][1-matches[&aln][i]].push_back(&aln);
             }
         } else {
-            for (auto i : bests.rbegin ()->second) {
+            for (auto i : bests.rbegin()->second) {
                 // 8 is the magic "extra" namespace
-                allele_support[8][matches[&aln][i]].push_back(&aln);
+                allele_support[8][1-matches[&aln][i]].push_back(&aln);
             }
         }
     }
@@ -762,10 +762,6 @@ HHGA::HHGA(size_t window_length,
             // sort it baby
             std::sort(sup.begin(), sup.end(), aln_sort);
             sup.erase(std::unique(sup.begin(), sup.end()), sup.end());
-            // prep for output
-            if (max_depth && sup.size() > max_depth) {
-                sup.erase(sup.begin() + max_depth, sup.end());
-            }
         }
     }
 
@@ -792,8 +788,9 @@ HHGA::HHGA(size_t window_length,
             auto& sup = hsup.second;
             for (auto& aln : sup) {
                 stringstream ss;
-                // we limit ourselves to only 8 alleles and 1 degenerate ( = 9)
+                // we limit ourselves to only 7 alleles, 1 softclip (=9) and 1 degenerate (OB=8)
                 ss << min(supp.first, 8) <<  "." << j++;
+                if (max_depth && j > max_depth) break;
                 alignment_groups[aln].push_back(ss.str());
                 grouped_alignments.push_back(make_pair(ss.str(), aln));
             }
