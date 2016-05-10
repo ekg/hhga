@@ -127,7 +127,7 @@ We use six symbols to encode the MSA, `{ A, T, G, C, N, U, M, R, S }`, where:
 
 Various features of the reads are represented in other namespaces.
     
-The first entry in the line defines the class of the example. By convention, we say the example is 1 if the haplotypes are correct, and -1 otherwise.
+The first entry in the line defines the class of the example. The correspondence between the classes and genotypes is: 1: 0/0, 2: 0/1, 3: 0/2, 4:1/1, 5:1/2, 6:2/2, 7:unkown
 
 * `ref` : the reference
 * `hap*`: the haplotypes described in the VCF record (including reference allele)
