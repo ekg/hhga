@@ -252,6 +252,79 @@ string genotype_for_labels(const map<int, double>& gt,
     return join(gts, "/");
 }
 
+pair<int, int> pair_for_gt_class(int gt) {
+    switch (gt) {
+    case 1: // 0/0
+        return make_pair(0,0);
+        break;
+    case 2: // 0/1
+        return make_pair(0,1);
+        break;
+    case 3: // 0/2
+        return make_pair(0,2);
+        break;
+    case 4: // 1/1
+        return make_pair(1,1);
+        break;
+    case 5: // 1/2
+        return make_pair(1,2);
+        break;
+    case 6: // 2/2
+        return make_pair(2,2);
+        break;
+    case 7: // ./.
+        return make_pair(8,8);
+        break;
+    default:
+        break;
+    }
+}
+
+double HHGA::prob_aln_gt(alignment_t* aln, int gt) {
+    auto& match = matches[aln];
+    auto& qsum = qualsum[aln];
+    double prob = 0;
+    auto gtp = pair_for_gt_class(gt);
+    int a = gtp.first;
+    int b = gtp.second;
+    double prob_sample = match[a]/2 + match[b]/2;
+    double prob_error = phred2float(qsum[a])/2 + phred2float(qsum[b])/2;
+    if (prob_error == 1 || prob_sample == 0) {
+        return 0;
+    } else {
+        return ln2phred(log(prob_sample) + log(prob_error));
+    }
+}
+
+double pairwise_qualsum(const vector<allele_t>& h1, const vector<allele_t>& h2) {
+    // assert they are normalized
+    // that given, we can compare directly
+    map<int, const allele_t*> p1;
+    map<int, const allele_t*> p2;
+    for (size_t i = 0; i < h1.size(); ++i) {
+        p1[i] = &h1[i];
+    }
+    for (size_t i = 0; i < h2.size(); ++i) {
+        p2[i] = &h2[i];
+    }
+    int possible = 0;
+    for (auto& p : p2) {
+        auto a2 = p.second->alt;
+        if (a2 != "M") ++possible;
+    }
+    double qualsum = 0;
+    for (auto& p : p1) {
+        auto a1 = p1[p.first]->alt;
+        if (p2.find(p.first) == p2.end()) continue;
+        auto a2 = p2[p.first]->alt;
+        if (a1 == "M" || a2 == "M") continue;
+        if (a1 == a2) {
+            qualsum += p.second->prob;
+        }
+    }
+    return (possible ? (double) qualsum / (double) possible : 0);
+}
+
 double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2) {
     int count = 0;
     // assert they are normalized
@@ -269,13 +342,11 @@ double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2)
         auto a2 = p.second->alt;
         if (a2 != "M") ++possible;
     }
-    int covered = 0;
     for (auto& p : p1) {
         auto a1 = p1[p.first]->alt;
         if (p2.find(p.first) == p2.end()) continue;
         auto a2 = p2[p.first]->alt;
         if (a1 == "M" || a2 == "M") continue;
-        ++covered;
         if (a1 == a2) {
             ++count;
         }
@@ -721,6 +792,30 @@ HHGA::HHGA(size_t window_length,
         }
     }
 
+    // sum up the quality support for the allele/hap/ref matches
+    for (auto& aln : alignments) {
+        if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        int i = 0;
+        auto& weight = qualsum[&aln];
+        for (auto& hap : haplotypes) {
+            weight[i] = pairwise_qualsum(
+                alignment_alleles[&aln],
+                hap);
+            ++i;
+        }
+    }
+
+    for (auto& aln : alignments) {
+        if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        int i = 0;
+        auto& prob = prob_aln_given_genotype[&aln];
+        // for all possible genotype
+        // estimate prob(aln | gentoype)
+        for (int i = 1; i <= 7; ++i) {
+            prob[i] = prob_aln_gt(&aln, i);
+        }
+    }
+
     auto aln_sort = [&](alignment_t* a1, alignment_t* a2) {
         auto& h1 = alignment_alleles[a1];
         auto& h2 = alignment_alleles[a2];
@@ -963,10 +1058,20 @@ const string HHGA::str(void) {
         out << " " << name;
 
         // now the matches
-        out << "\t";
+        out << " : ";
         for (auto w : matches[aln]) {
             out << w.second << " ";
         }
+        out << ": ";
+        // now the qualsums
+        for (auto w : qualsum[aln]) {
+            out << w.second << " ";
+        }
+        out << ": ";
+        for (auto w : prob_aln_given_genotype[aln]) {
+            out << w.second << " ";
+        }
+        out << ": ";
         out << aln->MapQuality;
         out << " " << aln->Name;
         out << endl;
@@ -1045,6 +1150,26 @@ const string HHGA::vw(void) {
         // match properties
         for (auto w : matches[aln]) {
             out << w.first+1 << "H:" << w.second << " ";
+        }
+    }
+
+    for (auto g : grouped_alignments) {
+        auto& name = g.first;
+        auto& aln = g.second;
+        out << "|qual" << name << " ";
+        // match properties
+        for (auto w : qualsum[aln]) {
+            out << w.first+1 << "H:" << w.second << " ";
+        }
+    }
+
+    for (auto g : grouped_alignments) {
+        auto& name = g.first;
+        auto& aln = g.second;
+        out << "|likelihood" << name << " ";
+        // match properties
+        for (auto w : prob_aln_given_genotype[aln]) {
+            out << w.first << "G:" << w.second << " ";
         }
     }
 

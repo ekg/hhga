@@ -85,7 +85,9 @@ map<int, double> labels_for_genotype(const string& gt);
 map<int, double> test_labels(int alt_count);
 // fraction of times where both are non-missing where they agree
 double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2);
+double pairwise_qualsum(const vector<allele_t>& h1, const vector<allele_t>& h2);
 int missing_count(const vector<allele_t>& hap);
+pair<int, int> pair_for_gt_class(int gt);
 
 class HHGA {
 public:
@@ -99,6 +101,10 @@ public:
     vector<alignment_t> alignments;
     map<alignment_t*, vector<allele_t> > alignment_alleles;
     map<alignment_t*, map<int, double> > matches;
+    map<alignment_t*, map<int, double> > qualsum;
+    // handling genotype likelihoods
+    double prob_aln_gt(alignment_t* aln, int gt);
+    map<alignment_t*, map<int, double> > prob_aln_given_genotype;;
     map<int, map<double, vector<alignment_t*> > > allele_support;
     map<int, vector<alignment_t*> > allele_examples; // same as support but limited number
     vector<alignment_t*> softclipped;
