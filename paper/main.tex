@@ -37,7 +37,7 @@ Another subject for whom have x,  x*,  y and  y*.
 Thousand subjects for whom only x* and y*.
 
 The star variables are lower quality but much more abudnant.
-Explain quality as mainly driven by depth of reads.
+Explain quality as mainly driven by depth of reads. % not exactly; for instance there are also context specific errors
 Assumption mulitple samples from the low quality can encode the full information (or close to) in the high quality.
 
 Approach one: learn in the low quality space x* to y*, use the subject for whom we have both star and non star to learn to transform one sample of non-star into K samples of star, so that we mantain perforance on the prediction task relative to training directly on star.
