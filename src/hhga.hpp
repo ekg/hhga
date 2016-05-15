@@ -105,6 +105,7 @@ public:
     // handling genotype likelihoods
     double prob_aln_gt(alignment_t* aln, int gt);
     map<alignment_t*, map<int, double> > prob_aln_given_genotype;;
+    map<int, double> likelihoods;
     map<int, map<double, vector<alignment_t*> > > allele_support;
     map<int, vector<alignment_t*> > allele_examples; // same as support but limited number
     vector<alignment_t*> softclipped;

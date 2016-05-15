@@ -285,15 +285,18 @@ double HHGA::prob_aln_gt(alignment_t* aln, int gt) {
     auto& qsum = qualsum[aln];
     double prob = 0;
     auto gtp = pair_for_gt_class(gt);
-    int a = gtp.first;
+    int a = gtp.first;;
     int b = gtp.second;
     double prob_sample = match[a]/2 + match[b]/2;
-    double prob_error = phred2float(qsum[a])/2 + phred2float(qsum[b])/2;
-    if (prob_error == 1 || prob_sample == 0) {
-        return 0;
-    } else {
-        return ln2phred(log(prob_sample) + log(prob_error));
+    double prob_in_gt = 1-(phred2float(qsum[a])/2 + phred2float(qsum[b])/2);
+    double qsumsum = 0;
+    for (auto& q : qsum) {
+        qsumsum += q.second;
     }
+    double prob_out_gt = 1-phred2float(qsumsum - (qsum[a]/2 + qsum[b]/2));
+    //double prob_error = 1-(phred2float(qsum[a])/2 + phred2float(qsum[b])/2);
+    //double prob_error = phred2float(qsum[a])/2 + phred2float(qsum[b])/2;
+    return prob_sample * prob_in_gt;
 }
 
 double pairwise_qualsum(const vector<allele_t>& h1, const vector<allele_t>& h2) {
@@ -805,14 +808,39 @@ HHGA::HHGA(size_t window_length,
         }
     }
 
+    for (int i = 1; i <= 7; ++i) {
+        likelihoods[i] = 1;
+    }
+
     for (auto& aln : alignments) {
         if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
         int i = 0;
         auto& prob = prob_aln_given_genotype[&aln];
         // for all possible genotype
         // estimate prob(aln | gentoype)
+        bool supports_anything = false;
         for (int i = 1; i <= 7; ++i) {
             prob[i] = prob_aln_gt(&aln, i);
+            if (prob[i] > 0) supports_anything = true;
+        }
+        if (supports_anything) {
+            for (int i = 1; i <= 7; ++i) {
+                likelihoods[i] *= prob[i];
+            }
+        }
+    }
+
+    double maxlikelihood = 0;
+    for (int i = 1; i <= 7; ++i) {
+        //likelihoods[i] = float2phred(1-likelihoods[i]);
+        maxlikelihood = max(maxlikelihood, likelihoods[i]);
+    }
+    if (maxlikelihood > 0) {
+        for (int i = 1; i <= 7; ++i) {
+            //likelihoods[i] = float2phred(1-likelihoods[i]);
+            auto l = likelihoods[i]/maxlikelihood;
+            if (l < 1e-3) l = 0;
+            likelihoods[i] = l;
         }
     }
 
@@ -1001,7 +1029,7 @@ vector<allele_t> HHGA::pad_alleles(vector<allele_t> aln_alleles,
 const string HHGA::str(void) {
     //return std::to_string(alleles.size());
     stringstream out;
-    out << std::fixed << std::setprecision(1);
+    //out << std::fixed << std::setprecision(1);
     out << repr << endl;
     out << "reference   ";
     for (auto& allele : reference) {
@@ -1076,6 +1104,11 @@ const string HHGA::str(void) {
         out << " " << aln->Name;
         out << endl;
     }
+
+    for (auto& l : likelihoods) {
+        out << l.first << ":" << l.second << " ";
+    }
+    out << endl;
 
     // now handle caller input features
     for (auto& f : call_info_num) {
@@ -1163,6 +1196,7 @@ const string HHGA::vw(void) {
         }
     }
 
+    /*
     for (auto g : grouped_alignments) {
         auto& name = g.first;
         auto& aln = g.second;
@@ -1171,6 +1205,11 @@ const string HHGA::vw(void) {
         for (auto w : prob_aln_given_genotype[aln]) {
             out << w.first << "G:" << w.second << " ";
         }
+    }
+    */
+    out << "|likelihood ";
+    for (auto& l : likelihoods) {
+        out << l.first << "G:" << l.second << " ";
     }
 
     for (auto g : grouped_alignments) {

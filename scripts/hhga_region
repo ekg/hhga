@@ -67,7 +67,7 @@ then
     echo "    -f, --fasta-ref arg   the FASTA reference genome"
     echo "    -w, --window arg      the window size in base pairs"
     echo "    -x, --max-depth arg   use only the first arg alignments"
-    echo "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]"
+#    echo "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]"
     echo "    -T, --truth arg       the VCF file used as the truth set"
     echo "    -B, --targets arg     targets to use in the comparison with the truth set"
     echo "    -b, --bam arg         the BAM-format alignment file for the sample we are learning from"
@@ -123,7 +123,7 @@ zcat $callable_variants \
 hhga -f $ref -r $region \
      -b $input_bam -v $labeled_variants \
      -w $window_size -x $max_depth \
-     -g truth -S $sample_name $(if [ $exponentiate ]; then echo --exponentiate; fi)\
+     -g truth -S $sample_name \
     | gzip >$hhga_genotypes
 
 if [ $debug == false ];
