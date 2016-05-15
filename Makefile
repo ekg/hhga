@@ -14,7 +14,7 @@ CXXFLAGS:=-O3 -msse4.1 -fopenmp -std=c++11 -ggdb
 CWD:=$(shell pwd)
 
 LD_INCLUDE_FLAGS:=-I$(CWD)/$(INC_DIR) -I. -I$(CWD)/$(SRC_DIR) -I$(CWD)/$(CPP_DIR) -I$(CWD)/$(INC_DIR)/bamtools
-LD_LIB_FLAGS:= -ggdb -L$(CWD)/$(LIB_DIR) -lvg -lvcflib -lhts -lbamtools -lpthread -lz -lm -lbz2
+LD_LIB_FLAGS:= -ggdb -L$(CWD)/$(LIB_DIR) -lvg -lvcflib -lgssw -lssw -lprotobuf -lhts -lpthread -ljansson -lncurses -lrocksdb -lsnappy -lz -lbz2 -lgcsa2 -lxg -ldivsufsort -ldivsufsort64 -lvcfh -lgfakluge -lraptor2 -lsupbub -lsdsl -lvcflib -lhts -lbamtools -lpthread -lz -lm -lbz2
 
 RAPTOR_INCLUDE:=/usr/include/
 ifeq ($(shell uname -s),Darwin)
@@ -74,7 +74,7 @@ $(LIB_DIR)/libvcflib.a: .pre-build
 	+. ./source_me.sh && cd $(VCFLIB_DIR) && $(MAKE) libvcflib.a && cp lib/* $(CWD)/$(LIB_DIR)/ && cp include/* $(CWD)/$(INC_DIR)/ && cp src/*.h* $(CWD)/$(INC_DIR)/
 
 $(LIB_DIR)/libvg.a: .pre-build
-	+. ./source_me.sh && cd $(VGLIB_DIR) && $(MAKE) && cp lib/libvg.a $(CWD)/$(LIB_DIR)/ && cp include/* $(CWD)/$(INC_DIR)/ && cp src/*.h* $(CWD)/$(INC_DIR)/
+	+. ./source_me.sh && cd $(VGLIB_DIR) && $(MAKE) && cp lib/*.a $(CWD)/$(LIB_DIR)/ && cp -r include/* $(CWD)/$(INC_DIR)/ && cp src/*.h* $(CWD)/$(INC_DIR)/
 
 # builds bamtools static lib, and copies into root
 $(LIB_DIR)/libbamtools.a:

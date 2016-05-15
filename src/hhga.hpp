@@ -14,6 +14,7 @@
 #include "Variant.h"
 #include <cmath>
 #include <iomanip>
+#include "vg.hpp"
 
 #include "join.h"
 
@@ -97,6 +98,10 @@ public:
     string repr; // for representing the site and variants
 
     typedef BamTools::BamAlignment alignment_t;
+
+    // graph
+    vg::VG graph;
+
     //set<allele_t> alleles;
     vector<alignment_t> alignments;
     map<alignment_t*, vector<allele_t> > alignment_alleles;
