@@ -1,0 +1,53 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage{nips_2016}
+\usepackage{algorithm,algpseudocode,amsfonts,xcolor}
+
+\title{} %https://scholar.google.cz/scholar?q=genotype&btnG=&hl=en&as_publication=neural+information+processing+systems&as_sdt=0%2C5&as_ylo=2012
+\author{NDP,EG, PD?}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+% the closest papers to ours are: http://papers.nips.cc/paper/4782-scalable-imputation-of-genetic-data-with-a-discrete-fragmentation-coagulation-process
+
+
+
+\section{Introduction}
+
+We present a state of the art genotype caller that learns to combine the strength of different underlying calling strategies (freebayes, fermkit).
+TODO:Explain why they have different strenghts (for general audience) 
+These alone achieve performance ocmpeitive with the state of the art in a recent FDA sponsored challenge.
+We then show how to leverage data obtained from thousands of other genomes using different sequencing techniques. 
+Thisexpands the potential o mahcine learning systems in tasks where the underlying technical inovation drving the dta generation process. 
+
+TODO: Describe the state of the art, GATK best practices, limitations (beyond libre software) which we overcome.
+
+
+Describe 1000G data  
+
+\section{Pipeline/ Bio}
+
+describe how we create the hhga files
+
+\section{Theory}
+
+A subject (each subject is  a few million (N) classification tasks) for whom we have  x and  need to predict y.
+Another subject for whom have x,  x*,  y and  y*.
+Thousand subjects for whom only x* and y*.
+
+The star variables are lower quality but much more abudnant.
+Explain quality as mainly driven by depth of reads.
+Assumption mulitple samples from the low quality can encode the full information (or close to) in the high quality.
+
+Approach one: learn in the low quality space x* to y*, use the subject for whom we have both star and non star to learn to transform one sample of non-star into K samples of star, so that we mantain perforance on the prediction task relative to training directly on star.
+
+
+
+
+
+\section{Empirical Performance}
+
+A table with the various flags
+
+\section{Conclusions Further}
