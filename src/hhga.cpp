@@ -429,18 +429,14 @@ HHGA::HHGA(size_t window_length,
     // we'll use this later to cut and pad the matrix
     string window_ref_seq = fasta_ref.getSubSequence(seq_name, begin_pos, window_length);
 
-    // set up our readers
-    set_region(bam_reader, seq_name, begin_pos, end_pos);
-
     //vcflib::VariantCallFile& graph_vcf;
     stringstream targetss;
     auto graph_begin_pos = begin_pos;
-    auto graph_end_pos = max(end_pos,
-                             (int32_t) (begin_pos + var.ref.size() + window_length/2));
-    targetss << seq_name << ":" << begin_pos << "-" << graph_end_pos;
+    auto graph_end_pos = begin_pos + var.ref.size() + window_length;
+    targetss << seq_name << ":" << graph_begin_pos << "-" << graph_end_pos;
     auto target = targetss.str();
     set<string> allowed_variants;
-    //cerr << var.vrepr() << endl;
+    //cerr << target << " " << var.vrepr() << endl;
     allowed_variants.insert(var.vrepr());
     graph = vg::VG(graph_vcf,
                    fasta_ref,
@@ -455,12 +451,51 @@ HHGA::HHGA(size_t window_length,
         graph.dice_nodes(max_node_size); // force nodes to be 1bp
     }
     graph.compact_ids();
-    //graph.serialize_to_file("x.vg");
+    int head_tail_id = 100;
+    for (auto& n : graph.head_nodes()) {
+        graph.swap_node_id(n, head_tail_id++);
+    }
+    for (auto& n : graph.tail_nodes()) {
+        graph.swap_node_id(n, head_tail_id++);
+    }
+    // now set the ids of the ref and alts to keep sort invariance
+    map<string, int> allele_seq_to_id;
+    {
+        int k = 0;
+        for (auto& a : var.alleles) {
+            allele_seq_to_id[a] = ++k;
+        }
+    }
+
+    graph.for_each_node([&](vg::Node* n) {
+            if (!graph.is_head_node(n)
+                && !graph.is_tail_node(n)) {
+                // find out which allele it is
+                // we're using a literal graphification of the VCF here due to options to vg construction
+                // so we should be able to map from non-head, non-tail node to VCF allele
+                auto f = allele_seq_to_id.find(n->sequence());
+                if (f == allele_seq_to_id.end()) {
+                    cerr << "could not find allele sequence for " << pb2json(*n) << endl;
+                    cerr << var << endl;
+                } else {
+                    graph.swap_node_id(n, f->second + 200);
+                }
+            }
+        });
+    
+    graph.rebuild_indexes();
+    //graph.serialize_to_file("graphs/"+target+ ".vg");
+    graph.for_each_node([&](vg::Node* n) {
+            graph_coverage[n->id()] = 0;
+            graph_weights[n->id()] = 0;
+        });
 
     long int lowestReferenceBase = 0;
     long unsigned int referenceBases = 0;
     unsigned int currentRefSeqID = 0;
 
+    // set up our readers
+    set_region(bam_reader, seq_name, begin_pos, end_pos);
     // get the alignments at the locus
     // aligning them to the graph
     BamTools::BamAlignment aln;
@@ -487,17 +522,20 @@ HHGA::HHGA(size_t window_length,
         }
         auto qual_per_node = alignment_quality_per_node(vgaln);
         for (auto& n : qual_per_node) {
-            graph_weights[n.first] += (double)n.second
-                /(double)graph.get_node(n.first)->sequence().size();
+            graph_weights[n.first] += (double)n.second;
         }
     }
-    double max_coverage = 0;
+
     for (auto& c : graph_coverage) {
-        max_coverage = max(max_coverage, c.second);
+        c.second /= (double)graph_alns.size();
     }
-    for (auto& c : graph_coverage) {
-        c.second /= max_coverage;
+
+    /*
+    for (auto& w : graph_weights) {
+        w.second /= (double)graph.get_node(w.first)->sequence().size();
+        w.second /= (double)graph_alns.size();
     }
+    */
 
     // highest position
     int32_t min_pos = alignments.front().Position;
@@ -1305,10 +1343,19 @@ const string HHGA::vw(void) {
         if (aln->IsProperPair())        out << "iproper:1"; else out << "iproper:0"; out << " ";
     }
 
-    out << "|vg ";
+    out << "|vgraph ";
+    graph.for_each_node([&](vg::Node* n) {
+            auto& seq = n->sequence();
+            for (int j = 0; j < seq.size(); ++j) {
+                out << n->id() << "_" << j << "_" << seq[j] << " ";
+            }
+        });
+
+    out << "|kgraph ";
     for (auto& w : graph_coverage) {
-        out << w.first << "C :" << w.second << " ";
+        out << w.first << "C:" << w.second << " ";
     }
+    out << "|wgraph ";
     for (auto& w : graph_weights) {
         out << w.first << "W:" << w.second << " ";
     }
