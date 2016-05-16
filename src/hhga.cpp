@@ -382,15 +382,17 @@ void HHGA::missing_to_ref(vector<vector<allele_t> >& obs) {
 HHGA::HHGA(size_t window_length,
            BamTools::BamMultiReader& bam_reader,
            FastaReference& fasta_ref,
+           vcflib::VariantCallFile& graph_vcf,
            vcflib::Variant& var,
            const string& input_name,
            const string& class_label,
            const string& gt_class,
            int max_depth,
+           int max_node_size,
            bool multiclass,
            bool expon,
            bool show_bases,
-           bool assume_ref) { // assumes the haplotypes are ref everywhere
+           bool assume_ref) {
 
     exponentiate = expon;
 
@@ -430,17 +432,73 @@ HHGA::HHGA(size_t window_length,
     // set up our readers
     set_region(bam_reader, seq_name, begin_pos, end_pos);
 
+    //vcflib::VariantCallFile& graph_vcf;
+    stringstream targetss;
+    auto graph_begin_pos = begin_pos;
+    auto graph_end_pos = max(end_pos,
+                             (int32_t) (begin_pos + var.ref.size() + window_length/2));
+    targetss << seq_name << ":" << begin_pos << "-" << graph_end_pos;
+    auto target = targetss.str();
+    set<string> allowed_variants;
+    //cerr << var.vrepr() << endl;
+    allowed_variants.insert(var.vrepr());
+    graph = vg::VG(graph_vcf,
+                   fasta_ref,
+                   target,
+                   false,
+                   1000,
+                   0,
+                   true, // don't manipulate the VCF records
+                   false, false, false,
+                   &allowed_variants);
+    if (max_node_size > 0) {
+        graph.dice_nodes(max_node_size); // force nodes to be 1bp
+    }
+    graph.compact_ids();
+    //graph.serialize_to_file("x.vg");
+
     long int lowestReferenceBase = 0;
     long unsigned int referenceBases = 0;
     unsigned int currentRefSeqID = 0;
 
     // get the alignments at the locus
+    // aligning them to the graph
     BamTools::BamAlignment aln;
     while (bam_reader.GetNextAlignment(aln)) {
         if (aln.IsMapped()) {
             alignments.push_back(aln);
         }
     }
+
+    // now handle the graph region, which can be bigger
+    set_region(bam_reader, seq_name, graph_begin_pos, graph_end_pos);
+    while (bam_reader.GetNextAlignment(aln)) {
+        auto vgaln = graph.align(aln.QueryBases);
+        vgaln.set_quality(aln.Qualities);
+        graph_alns.push_back(vgaln);
+    }
+    
+    // compress the alignment information into the graph
+    for (auto& vgaln : graph_alns) {
+        auto& path = vgaln.path();
+        for (int i = 0; i < path.mapping_size(); ++i) {
+            auto mapping = path.mapping(i);
+            graph_coverage[mapping.position().node_id()]++;
+        }
+        auto qual_per_node = alignment_quality_per_node(vgaln);
+        for (auto& n : qual_per_node) {
+            graph_weights[n.first] += (double)n.second
+                /(double)graph.get_node(n.first)->sequence().size();
+        }
+    }
+    double max_coverage = 0;
+    for (auto& c : graph_coverage) {
+        max_coverage = max(max_coverage, c.second);
+    }
+    for (auto& c : graph_coverage) {
+        c.second /= max_coverage;
+    }
+
     // highest position
     int32_t min_pos = alignments.front().Position;
     int32_t max_pos = min_pos;
@@ -1105,8 +1163,21 @@ const string HHGA::str(void) {
         out << endl;
     }
 
+    out << "p(obs|genotype)s ";
     for (auto& l : likelihoods) {
         out << l.first << ":" << l.second << " ";
+    }
+    out << endl;
+
+    out << "graph_coverage ";
+    for (auto& w : graph_coverage) {
+        out << w.first << "N:" << w.second << " ";
+    }
+    out << endl;
+
+    out << "graph_weight ";
+    for (auto& w : graph_weights) {
+        out << w.first << "N:" << w.second << " ";
     }
     out << endl;
 
@@ -1232,6 +1303,14 @@ const string HHGA::vw(void) {
         if (aln->IsPaired())            out << "paired:1"; else out << "paired:0"; out << " ";
         if (aln->IsPrimaryAlignment())  out << "zprimary:1"; else out << "zprimary:0"; out << " ";
         if (aln->IsProperPair())        out << "iproper:1"; else out << "iproper:0"; out << " ";
+    }
+
+    out << "|vg ";
+    for (auto& w : graph_coverage) {
+        out << w.first << "C :" << w.second << " ";
+    }
+    for (auto& w : graph_weights) {
+        out << w.first << "W:" << w.second << " ";
     }
 
     out << "|software ";

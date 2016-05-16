@@ -10,6 +10,8 @@ void printUsage(int argc, char** argv) {
          << "options:" << endl
          << "    -h, --help            this dialog" << endl
          << "    -f, --fasta-reference FILE  the reference sequence" << endl
+         << "    -V, --vg-reference FILE     realign against the variation graph encoded by VCF-format FILE" << endl
+         << "    -N, --max-node-size N       chop the nodes in the VG graph to this maximum node size" << endl
          << "    -b, --bam FILE        use this BAM as input (multiple allowed)" << endl
          << "    -v, --vcf FILE        derive an example from every record in this file" << endl
          << "    -n, --name NAME       apply NAME as the prefix for the annotations in --vcf" << endl
@@ -42,6 +44,7 @@ int main(int argc, char** argv) {
     string vcf_feature_prefix;
     string region_string;
     string fastaFile;
+    string graph_vcf_file_name;
     string output_format = "vw";
     string class_label;
     size_t window_size = 50;
@@ -55,6 +58,8 @@ int main(int argc, char** argv) {
     bool multiclass = false;
     string sample_name;
     int max_depth = 0;
+    int max_node_size = 0;
+    //int graph_window_size = 0; // TODO
 
     // parse command-line options
     int c;
@@ -69,6 +74,7 @@ int main(int argc, char** argv) {
             {"name", required_argument, 0, 'n'},
             {"region", required_argument, 0, 'r'},
             {"fasta-reference", required_argument, 0, 'f'},
+            {"vg-reference", required_argument, 0, 'V'},
             {"text-viz", no_argument, 0, 't'},
             {"class-label", no_argument, 0, 'c'},
             {"gt-class", required_argument, 0, 'g'},
@@ -81,13 +87,14 @@ int main(int argc, char** argv) {
             {"sample-name", required_argument, 0, 'S'},
             {"multiclass", required_argument, 0, 'm'},
             {"max-depth", required_argument, 0, 'x'},
+            {"max-node-size", required_argument, 0, 'N'},
             {"debug", no_argument, 0, 'd'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg:S:Gmax:",
+        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg:S:Gmax:V:N:",
                          long_options, &option_index);
 
         if (c == -1)
@@ -111,6 +118,10 @@ int main(int argc, char** argv) {
 
         case 'v':
             vcf_file_name = optarg;
+            break;
+
+        case 'V':
+            graph_vcf_file_name = optarg;            
             break;
 
         case 'n':
@@ -167,6 +178,10 @@ int main(int argc, char** argv) {
 
         case 'x':
             max_depth = atoi(optarg);
+            break;
+
+        case 'N':
+            max_node_size = atoi(optarg);
             break;
 
         case 'S':
@@ -288,6 +303,18 @@ int main(int argc, char** argv) {
         }
     }
 
+    if (graph_vcf_file_name.empty()) {
+        graph_vcf_file_name = vcf_file_name;
+    }
+    vcflib::VariantCallFile graph_ref;
+    if (!graph_vcf_file_name.empty()) {
+        graph_ref.open(graph_vcf_file_name);
+        if (!graph_ref.is_open()) {
+            cerr << "could not open " << graph_vcf_file_name << endl;
+            return 1;
+        }
+    }
+
     FastaReference fasta_ref;
     fasta_ref.open(fastaFile);
 
@@ -302,11 +329,13 @@ int main(int argc, char** argv) {
         HHGA hhga(window_size,
                   bam_reader,
                   fasta_ref,
+                  graph_ref,
                   var,
                   vcf_feature_prefix,
                   class_label,
                   gt_class,
                   max_depth,
+                  max_node_size,
                   multiclass,
                   exponentiate,
                   show_bases,

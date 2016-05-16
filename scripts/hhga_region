@@ -6,6 +6,7 @@ debug=false
 region=false
 window_size=false
 ref=false
+graph_ref=false
 ground_truth=false
 ground_callable=false
 input_bam=false
@@ -69,6 +70,7 @@ then
     echo "    -x, --max-depth arg   use only the first arg alignments"
 #    echo "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]"
     echo "    -T, --truth arg       the VCF file used as the truth set"
+    echo "    -V, --graph-vcf arg   the VCF file used as the reference graph set"
     echo "    -B, --targets arg     targets to use in the comparison with the truth set"
     echo "    -b, --bam arg         the BAM-format alignment file for the sample we are learning from"
     echo "    -v, --vcf arg         the VCF file describing our example genotypes"
@@ -91,6 +93,11 @@ callable_variants=$output_dir/$region.callable.vcf.gz
 uncallable_variants=$output_dir/$region.uncallable.vcf.gz
 labeled_variants=$output_dir/$region.label.vcf.gz
 hhga_genotypes=$output_dir/$region.hhga.gz
+
+if [[ $graph_ref == false ]];
+then
+    graph_ref=$normalized_variants
+fi
 
 tabix -h $ground_truth $region \
     | vcfintersect -b <(zcat $ground_callable) \
@@ -124,6 +131,7 @@ hhga -f $ref -r $region \
      -b $input_bam -v $labeled_variants \
      -w $window_size -x $max_depth \
      -g truth -S $sample_name \
+     -V $graph_ref \
     | gzip >$hhga_genotypes
 
 if [ $debug == false ];

@@ -101,6 +101,9 @@ public:
 
     // graph
     vg::VG graph;
+    vector<vg::Alignment> graph_alns;
+    map<int, double> graph_weights;
+    map<int, double> graph_coverage;
 
     //set<allele_t> alleles;
     vector<alignment_t> alignments;
@@ -145,11 +148,13 @@ public:
     HHGA(size_t window_size,
          BamTools::BamMultiReader& bam_reader,
          FastaReference& fasta_ref,
+         vcflib::VariantCallFile& graph_vcf,
          vcflib::Variant& var,
          const string& input_name,
          const string& class_label,
          const string& gt_class,
          int max_depth = 0,
+         int max_node_size = 0,
          bool multiclass = false,
          bool expon = false,
          bool show_bases = false,
