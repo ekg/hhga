@@ -383,6 +383,7 @@ HHGA::HHGA(size_t window_length,
            BamTools::BamMultiReader& bam_reader,
            FastaReference& fasta_ref,
            vcflib::VariantCallFile& graph_vcf,
+           size_t graph_window,
            vcflib::Variant& var,
            const string& input_name,
            const string& class_label,
@@ -431,8 +432,8 @@ HHGA::HHGA(size_t window_length,
 
     //vcflib::VariantCallFile& graph_vcf;
     stringstream targetss;
-    auto graph_begin_pos = begin_pos;
-    auto graph_end_pos = begin_pos + var.ref.size() + window_length;
+    auto graph_begin_pos = var.position-1 - graph_window/2;
+    auto graph_end_pos = var.position-1 + var.ref.size() + graph_window/2;
     targetss << seq_name << ":" << graph_begin_pos << "-" << graph_end_pos;
     auto target = targetss.str();
     set<string> allowed_variants;
@@ -467,6 +468,7 @@ HHGA::HHGA(size_t window_length,
         }
     }
 
+    /// todo ... switch k to use fraction mapping to each allele
     graph.for_each_node([&](vg::Node* n) {
             if (!graph.is_head_node(n)
                 && !graph.is_tail_node(n)) {
@@ -525,6 +527,8 @@ HHGA::HHGA(size_t window_length,
             graph_weights[n.first] += (double)n.second;
         }
     }
+
+    // what fraction map to each allele
 
     if (graph_alns.size() > 0) { // avoid -nan
         for (auto& c : graph_coverage) {

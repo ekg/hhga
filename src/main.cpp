@@ -16,6 +16,7 @@ void printUsage(int argc, char** argv) {
          << "    -v, --vcf FILE        derive an example from every record in this file" << endl
          << "    -n, --name NAME       apply NAME as the prefix for the annotations in --vcf" << endl
          << "    -w, --window-size N   use a fixed window of this size in the MSA matrix" << endl
+         << "    -W, --graph-window N  use a graph window of this size (defaults to --window-size)" << endl
          << "    -r, --region REGION   limit variants to those in this region (chr:start-end)" << endl
          << "    -t, --text-viz        make a human-readible, compact output" << endl
          << "    -c, --class-label X   add this label (e.g. -1 for false, 1 for true)" << endl
@@ -39,6 +40,9 @@ void printUsage(int argc, char** argv) {
 
 int main(int argc, char** argv) {
 
+    // force single threaded (vg commands seem to go multi-threaded)
+    omp_set_num_threads(1);
+
     vector<string> inputFilenames;
     string vcf_file_name;
     string vcf_feature_prefix;
@@ -48,6 +52,7 @@ int main(int argc, char** argv) {
     string output_format = "vw";
     string class_label;
     size_t window_size = 50;
+    size_t graph_window = 0;
     bool debug = false;
     bool exponentiate = false;
     bool show_bases = false;
@@ -59,7 +64,6 @@ int main(int argc, char** argv) {
     string sample_name;
     int max_depth = 0;
     int max_node_size = 0;
-    //int graph_window_size = 0; // TODO
 
     // parse command-line options
     int c;
@@ -79,6 +83,7 @@ int main(int argc, char** argv) {
             {"class-label", no_argument, 0, 'c'},
             {"gt-class", required_argument, 0, 'g'},
             {"window-size", required_argument, 0, 'w'},
+            {"graph-window", required_argument, 0, 'W'},
             {"exponentiate", no_argument, 0, 'e'},
             {"show-bases", no_argument, 0, 's'},
             {"assume-ref", no_argument, 0, 'a'},
@@ -94,7 +99,7 @@ int main(int argc, char** argv) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg:S:Gmax:V:N:",
+        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg:S:Gmax:V:N:W:",
                          long_options, &option_index);
 
         if (c == -1)
@@ -150,6 +155,10 @@ int main(int argc, char** argv) {
 
         case 'w':
             window_size = atoi(optarg);
+            break;
+
+        case 'W':
+            graph_window = atoi(optarg);
             break;
 
         case 'e':
@@ -315,6 +324,10 @@ int main(int argc, char** argv) {
         }
     }
 
+    if (graph_window == 0) {
+        graph_window = window_size;
+    }
+
     FastaReference fasta_ref;
     fasta_ref.open(fastaFile);
 
@@ -330,6 +343,7 @@ int main(int argc, char** argv) {
                   bam_reader,
                   fasta_ref,
                   graph_ref,
+                  graph_window,
                   var,
                   vcf_feature_prefix,
                   class_label,

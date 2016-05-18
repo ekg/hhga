@@ -150,6 +150,7 @@ public:
          BamTools::BamMultiReader& bam_reader,
          FastaReference& fasta_ref,
          vcflib::VariantCallFile& graph_vcf,
+         size_t graph_window,
          vcflib::Variant& var,
          const string& input_name,
          const string& class_label,
