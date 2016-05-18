@@ -468,6 +468,7 @@ HHGA::HHGA(size_t window_length,
         }
     }
 
+    set<vg::id_t> allele_nodes;
     /// todo ... switch k to use fraction mapping to each allele
     graph.for_each_node([&](vg::Node* n) {
             if (!graph.is_head_node(n)
@@ -481,6 +482,7 @@ HHGA::HHGA(size_t window_length,
                     cerr << var << endl;
                 } else {
                     graph.swap_node_id(n, f->second + 200);
+                    allele_nodes.insert(f->second + 200);
                 }
             }
         });
@@ -514,6 +516,7 @@ HHGA::HHGA(size_t window_length,
         vgaln.set_quality(aln.Qualities);
         graph_alns.push_back(vgaln);
     }
+
     
     // compress the alignment information into the graph
     for (auto& vgaln : graph_alns) {
@@ -528,20 +531,22 @@ HHGA::HHGA(size_t window_length,
         }
     }
 
-    // what fraction map to each allele
-
-    if (graph_alns.size() > 0) { // avoid -nan
-        for (auto& c : graph_coverage) {
-            c.second /= (double)graph_alns.size();
+    double mapping_to_alleles = 0;
+    for (auto& c : graph_coverage) {
+        if (allele_nodes.count(c.first)) {
+            mapping_to_alleles += c.second;
         }
     }
 
-    /*
-    for (auto& w : graph_weights) {
-        w.second /= (double)graph.get_node(w.first)->sequence().size();
-        w.second /= (double)graph_alns.size();
+    if (mapping_to_alleles > 0) { // avoid -nan
+        for (auto& c : graph_coverage) {
+            if (allele_nodes.count(c.first)) {
+                c.second /= (double) mapping_to_alleles;
+            } else {
+                c.second = 0;
+            }
+        }
     }
-    */
 
     // highest position
     int32_t min_pos = alignments.front().Position;
@@ -1225,11 +1230,13 @@ const string HHGA::str(void) {
     }
     out << endl;
 
+    /*
     out << "graph_weight ";
     for (auto& w : graph_weights) {
         out << w.first << "N:" << w.second << " ";
     }
     out << endl;
+    */
 
     // now handle caller input features
     for (auto& f : call_info_num) {
@@ -1359,10 +1366,6 @@ const string HHGA::vw(void) {
     out << "|kgraph ";
     for (auto& w : graph_coverage) {
         out << w.first << "C:" << w.second << " ";
-    }
-    out << "|wgraph ";
-    for (auto& w : graph_weights) {
-        out << w.first << "W:" << w.second << " ";
     }
 
     out << "|software ";
