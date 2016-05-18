@@ -880,6 +880,12 @@ HHGA::HHGA(size_t window_length,
         }
     }
 
+    alignment_count = 0;
+    for (auto& aln : alignments) {
+        if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        ++alignment_count;
+    }
+
     // establish the allele/hap/ref matches
     for (auto& aln : alignments) {
         if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
@@ -1307,17 +1313,10 @@ const string HHGA::vw(void) {
         }
     }
 
-    /*
-    for (auto g : grouped_alignments) {
-        auto& name = g.first;
-        auto& aln = g.second;
-        out << "|likelihood" << name << " ";
-        // match properties
-        for (auto w : prob_aln_given_genotype[aln]) {
-            out << w.first << "G:" << w.second << " ";
-        }
-    }
-    */
+    out << "|depth ";
+    out << "bam:" << alignment_count << " ";
+    out << "graph:" << graph_alns.size() << " ";
+
     out << "|likelihood ";
     for (auto& l : likelihoods) {
         out << l.first << "G:" << l.second << " ";

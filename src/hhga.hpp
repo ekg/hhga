@@ -106,6 +106,7 @@ public:
     map<int, double> graph_coverage;
 
     //set<allele_t> alleles;
+    int alignment_count;
     vector<alignment_t> alignments;
     map<alignment_t*, vector<allele_t> > alignment_alleles;
     map<alignment_t*, map<int, double> > matches;
