@@ -74,7 +74,7 @@ $(LIB_DIR)/libvcflib.a: .pre-build
 	+. ./source_me.sh && cd $(VCFLIB_DIR) && $(MAKE) libvcflib.a && cp lib/* $(CWD)/$(LIB_DIR)/ && cp include/* $(CWD)/$(INC_DIR)/ && cp src/*.h* $(CWD)/$(INC_DIR)/
 
 $(LIB_DIR)/libvg.a: .pre-build
-	+. ./source_me.sh && cd $(VGLIB_DIR) && $(MAKE) && cp lib/*.a $(CWD)/$(LIB_DIR)/ && cp -r include/* $(CWD)/$(INC_DIR)/ && cp src/*.h* $(CWD)/$(INC_DIR)/
+	+cd $(VGLIB_DIR) && . ./source_me.sh && $(MAKE) && cp lib/*.a $(CWD)/$(LIB_DIR)/ && cp -r include/* $(CWD)/$(INC_DIR)/ && cp src/*.h* $(CWD)/$(INC_DIR)/
 
 # builds bamtools static lib, and copies into root
 $(LIB_DIR)/libbamtools.a:

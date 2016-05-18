@@ -526,8 +526,10 @@ HHGA::HHGA(size_t window_length,
         }
     }
 
-    for (auto& c : graph_coverage) {
-        c.second /= (double)graph_alns.size();
+    if (graph_alns.size() > 0) { // avoid -nan
+        for (auto& c : graph_coverage) {
+            c.second /= (double)graph_alns.size();
+        }
     }
 
     /*
