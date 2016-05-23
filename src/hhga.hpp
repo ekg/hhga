@@ -145,6 +145,7 @@ public:
     void project_positions(vector<allele_t>& aln_alleles,
                            map<pair<int32_t, size_t>, size_t>& pos_proj);
     void flatten_to_ref(vector<allele_t>& alleles);
+    void strandify(vector<allele_t>& alleles, bool is_rev);
     void missing_to_ref(vector<vector<allele_t> >& obs);
 
     // construct the hhga of a particular region

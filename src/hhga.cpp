@@ -896,7 +896,6 @@ HHGA::HHGA(size_t window_length,
         for (auto a = alignment_alleles.begin(); a != alignment_alleles.end(); ++a) {
             flatten_to_ref(a->second);
         }
-
         for (auto& hap : haplotypes) {
             flatten_to_ref(hap);
         }
@@ -1035,14 +1034,24 @@ HHGA::HHGA(size_t window_length,
 
     // organize the ordered alignments
     for (auto& supp : allele_support) {
-        j = 0;
+        int i = 0;
+        int j = 0;
+        int u = 0; // unitigs
         for (auto& hsup : supp.second) {
             auto& sup = hsup.second;
             for (auto& aln : sup) {
                 stringstream ss;
                 // we limit ourselves to only 7 alleles, 1 softclip (=9) and 1 degenerate (OB=8)
-                ss << min(supp.first, 8) <<  "." << j++;
-                if (max_depth && j > max_depth) break;
+                if (unitigs.count(aln)) {
+                    ss << min(supp.first, 8) << "u" << u++;
+                } else {
+                    if (aln->IsReverseStrand()) {
+                        ss << min(supp.first, 8) << "-" << i++;
+                    } else {
+                        ss << min(supp.first, 8) << "+" << j++;
+                    }
+                }
+                if (max_depth && j+i > max_depth) break;
                 alignment_groups[aln].push_back(ss.str());
                 if (!unitigs.count(aln)) {
                     grouped_normal_alignments.push_back(make_pair(ss.str(), aln));
@@ -1054,16 +1063,28 @@ HHGA::HHGA(size_t window_length,
     }
 
     // and the soft clips
-    j = 0;
-    for (auto& aln : softclipped) {
-        stringstream ss;
-        // we keep soft clips in the special namespace 9
-        ss << 9 <<  "." << j++;
-        alignment_groups[aln].push_back(ss.str());
-        if (!unitigs.count(aln)) {
-            grouped_normal_alignments.push_back(make_pair(ss.str(), aln));
-        } else {
-            grouped_unitig_alignments.push_back(make_pair(ss.str(), aln));
+    {
+        int i = 0; // forward strand
+        int j = 0; // reverse strand
+        int u = 0; // unitigs
+        for (auto& aln : softclipped) {
+            stringstream ss;
+            // we keep soft clips in the special namespace 9
+            if (unitigs.count(aln)) {
+                ss << 9 << "u" << u++;
+            } else {
+                if (aln->IsReverseStrand()) {
+                    ss << 9 << "-" << i++;
+                } else {
+                    ss << 9 << "+" << j++;
+                }
+            }
+            alignment_groups[aln].push_back(ss.str());
+            if (!unitigs.count(aln)) {
+                grouped_normal_alignments.push_back(make_pair(ss.str(), aln));
+            } else {
+                grouped_unitig_alignments.push_back(make_pair(ss.str(), aln));
+            }
         }
     }
 
@@ -1083,6 +1104,15 @@ void HHGA::flatten_to_ref(vector<allele_t>& alleles) {
             && allele.alt != "M"
             && allele.alt == allele.ref) {
             allele.alt = "R";
+        }
+    }
+}
+
+void HHGA::strandify(vector<allele_t>& alleles, bool is_rev) {
+    if (is_rev) {
+        for (auto& allele : alleles) {
+            // set to lower case
+            std::transform(allele.alt.begin(), allele.alt.end(), allele.alt.begin(), ::tolower);
         }
     }
 }
@@ -1153,13 +1183,7 @@ vector<allele_t> HHGA::pad_alleles(vector<allele_t> aln_alleles,
                                     return allele.position < bal_min || allele.position >= bal_max;
                                 }),
                       padded.end());
-    //if (aln_alleles.empty()) return padded;
-    
-    /*
-    cerr << "padded: ";
-    for (auto& a : padded) cerr << a << " ";
-    cerr << endl;
-    */
+
     return padded;
 }
 
