@@ -511,12 +511,15 @@ HHGA::HHGA(size_t window_length,
 
     // now handle the graph region, which can be bigger
     set_region(bam_reader, seq_name, graph_begin_pos, graph_end_pos);
+    //stringstream t; t << "graphs/" << target << ".reads";
+    //ofstream oalns(t.str());
     while (bam_reader.GetNextAlignment(aln)) {
         auto vgaln = graph.align(aln.QueryBases);
         vgaln.set_quality(aln.Qualities);
         graph_alns.push_back(vgaln);
+        //oalns << aln.QueryBases << endl;
     }
-
+    //oalns.close();
     
     // compress the alignment information into the graph
     for (auto& vgaln : graph_alns) {
