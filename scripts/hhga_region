@@ -11,6 +11,7 @@ graph_ref=false
 ground_truth=false
 ground_callable=false
 input_bam=false
+input_unitigs=false
 vcf=false
 output_dir=false
 sample_name=false
@@ -23,7 +24,7 @@ then
 fi
 
 # read the options
-TEMP=`getopt -o r:w:W:f:T:B:b:v:o:S:x:ehd --long region:,window:,graph-window:,fasta-ref:,truth:,targets:,sample:,bam:,vcf:,output:,max-depth:,exponentiate,help,debug -n 'hhga_region' -- "$@"`
+TEMP=`getopt -o r:w:W:f:T:B:b:u:v:o:S:x:ehd --long region:,window:,graph-window:,fasta-ref:,truth:,targets:,sample:,bam:,vcf:,output:,max-depth:,exponentiate,help,debug -n 'hhga_region' -- "$@"`
 eval set -- "$TEMP"
 
 # extract options and their arguments into variables.
@@ -37,6 +38,7 @@ while true ; do
         -T|--truth) ground_truth=$2 ; shift 2 ;;
         -B|--targets) ground_callable=$2 ; shift 2 ;;
         -b|--bam) input_bam=$2 ; shift 2 ;;
+        -u|--unitigs) input_unitigs=$2 ; shift 2 ;;
         -v|--vcf) vcf=$2 ; shift 2 ;;
         -o|--output) output_dir=$2 ; shift 2 ;;
         -S|--sample) sample_name=$2 ; shift 2 ;;
@@ -76,6 +78,7 @@ then
     echo "    -V, --graph-vcf arg    the VCF file used as the reference graph set"
     echo "    -B, --targets arg      targets to use in the comparison with the truth set"
     echo "    -b, --bam arg          the BAM-format alignment file for the sample we are learning from"
+    echo "    -u, --unitigs arg      the BAM-format unitigs file for the sample we are learning from"
     echo "    -v, --vcf arg          the VCF file describing our example genotypes"
     echo "    -o, --output arg       write our output into this directory named dir/region.hhga.gz"
     echo "    -S, --sample arg       the sample name"
@@ -141,6 +144,7 @@ hhga -f $ref -r $region \
      -g truth -S $sample_name \
      -V $graph_ref \
      -W $graph_window \
+     $(if [[ "$input_unitigs" != false ]]; then echo -u $input_unitigs; fi) \
     | gzip >$hhga_genotypes
 
 if [ $debug == false ];

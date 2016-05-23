@@ -108,6 +108,7 @@ public:
     //set<allele_t> alleles;
     int alignment_count;
     vector<alignment_t> alignments;
+    set<alignment_t*> unitigs;
     map<alignment_t*, vector<allele_t> > alignment_alleles;
     map<alignment_t*, map<int, double> > matches;
     map<alignment_t*, map<int, double> > qualsum;
@@ -119,7 +120,8 @@ public:
     map<int, vector<alignment_t*> > allele_examples; // same as support but limited number
     vector<alignment_t*> softclipped;
     map<alignment_t*, vector<string> > alignment_groups;
-    vector<pair<string, alignment_t*> > grouped_alignments;
+    vector<pair<string, alignment_t*> > grouped_normal_alignments;
+    vector<pair<string, alignment_t*> > grouped_unitig_alignments;
 
     // the class label for the example
     string label;
@@ -148,6 +150,7 @@ public:
     // construct the hhga of a particular region
     HHGA(size_t window_size,
          BamTools::BamMultiReader& bam_reader,
+         BamTools::BamMultiReader& unitig_reader,
          FastaReference& fasta_ref,
          vcflib::VariantCallFile& graph_vcf,
          size_t graph_window,

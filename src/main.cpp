@@ -13,6 +13,7 @@ void printUsage(int argc, char** argv) {
          << "    -V, --vg-reference FILE     realign against the variation graph encoded by VCF-format FILE" << endl
          << "    -N, --max-node-size N       chop the nodes in the VG graph to this maximum node size" << endl
          << "    -b, --bam FILE        use this BAM as input (multiple allowed)" << endl
+         << "    -u, --unitig FILE     use this BAM as unitig input (multiple allowed)" << endl
          << "    -v, --vcf FILE        derive an example from every record in this file" << endl
          << "    -n, --name NAME       apply NAME as the prefix for the annotations in --vcf" << endl
          << "    -w, --window-size N   use a fixed window of this size in the MSA matrix" << endl
@@ -44,6 +45,7 @@ int main(int argc, char** argv) {
     omp_set_num_threads(1);
 
     vector<string> inputFilenames;
+    vector<string> unitigFilenames;
     string vcf_file_name;
     string vcf_feature_prefix;
     string region_string;
@@ -74,6 +76,7 @@ int main(int argc, char** argv) {
         {
             {"help", no_argument, 0, 'h'},
             {"bam",  required_argument, 0, 'b'},
+            {"unitig",  required_argument, 0, 'u'},
             {"vcf", required_argument, 0, 'v'},
             {"name", required_argument, 0, 'n'},
             {"region", required_argument, 0, 'r'},
@@ -99,7 +102,7 @@ int main(int argc, char** argv) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:r:f:v:tc:w:dn:espg:S:Gmax:V:N:W:",
+        c = getopt_long (argc, argv, "hb:u:r:f:v:tc:w:dn:espg:S:Gmax:V:N:W:",
                          long_options, &option_index);
 
         if (c == -1)
@@ -119,6 +122,10 @@ int main(int argc, char** argv) {
 
         case 'b':
             inputFilenames.push_back(optarg);
+            break;
+
+        case 'u':
+            unitigFilenames.push_back(optarg);
             break;
 
         case 'v':
@@ -303,6 +310,12 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    BamTools::BamMultiReader unitig_reader;
+    if (!unitig_reader.Open(unitigFilenames)) {
+        cerr << "could not open input unitig BAM files" << endl;
+        return 1;
+    }
+
     vcflib::VariantCallFile vcf_file;
     if (!vcf_file_name.empty()) {
         vcf_file.open(vcf_file_name);
@@ -341,6 +354,7 @@ int main(int argc, char** argv) {
         if (debug) { cerr << "Got variant " << var << endl; }
         HHGA hhga(window_size,
                   bam_reader,
+                  unitig_reader,
                   fasta_ref,
                   graph_ref,
                   graph_window,

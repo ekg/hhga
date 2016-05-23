@@ -381,6 +381,7 @@ void HHGA::missing_to_ref(vector<vector<allele_t> >& obs) {
 
 HHGA::HHGA(size_t window_length,
            BamTools::BamMultiReader& bam_reader,
+           BamTools::BamMultiReader& unitig_reader,
            FastaReference& fasta_ref,
            vcflib::VariantCallFile& graph_vcf,
            size_t graph_window,
@@ -520,7 +521,19 @@ HHGA::HHGA(size_t window_length,
         //oalns << aln.QueryBases << endl;
     }
     //oalns.close();
-    
+
+    // handle the unitigs
+    set_region(unitig_reader, seq_name, begin_pos, end_pos);
+    //BamTools::BamAlignment aln;
+    int unitig_count = 0;
+    while (unitig_reader.GetNextAlignment(aln)) {
+        if (aln.IsMapped()) {
+            alignments.push_back(aln);
+            ++unitig_count;
+            unitigs.insert(&alignments.back());
+        }
+    }
+
     // compress the alignment information into the graph
     for (auto& vgaln : graph_alns) {
         auto& path = vgaln.path();
@@ -1031,7 +1044,11 @@ HHGA::HHGA(size_t window_length,
                 ss << min(supp.first, 8) <<  "." << j++;
                 if (max_depth && j > max_depth) break;
                 alignment_groups[aln].push_back(ss.str());
-                grouped_alignments.push_back(make_pair(ss.str(), aln));
+                if (!unitigs.count(aln)) {
+                    grouped_normal_alignments.push_back(make_pair(ss.str(), aln));
+                } else {
+                    grouped_unitig_alignments.push_back(make_pair(ss.str(), aln));
+                }
             }
         }
     }
@@ -1043,7 +1060,11 @@ HHGA::HHGA(size_t window_length,
         // we keep soft clips in the special namespace 9
         ss << 9 <<  "." << j++;
         alignment_groups[aln].push_back(ss.str());
-        grouped_alignments.push_back(make_pair(ss.str(), aln));
+        if (!unitigs.count(aln)) {
+            grouped_normal_alignments.push_back(make_pair(ss.str(), aln));
+        } else {
+            grouped_unitig_alignments.push_back(make_pair(ss.str(), aln));
+        }
     }
 
     // make the label that represents our hhga site
@@ -1147,7 +1168,7 @@ const string HHGA::str(void) {
     stringstream out;
     //out << std::fixed << std::setprecision(1);
     out << repr << endl;
-    out << "reference   ";
+    out << "reference          ";
     for (auto& allele : reference) {
         if (allele.alt == "M") out << " ";
         else if (allele.alt == "U") out << "-";
@@ -1156,7 +1177,7 @@ const string HHGA::str(void) {
     }
     out << endl;
     for (auto& hap : haplotypes) {
-        out << "hap         ";
+        out << "hap                ";
         for (auto& allele : hap) {
             if (allele.alt == "M") out << " ";
             else if (allele.alt == "U") out << "-";
@@ -1166,7 +1187,7 @@ const string HHGA::str(void) {
         out << endl;
     }
     for (auto& hap : genotypes) {
-        out << "geno        ";
+        out << "geno               ";
         for (auto& allele : hap) {
             if (allele.alt == "M") out << " ";
             else if (allele.alt == "U") out << "-";
@@ -1176,10 +1197,10 @@ const string HHGA::str(void) {
         out << endl;
     }
 
-    for (auto g : grouped_alignments) {
-        auto& name = g.first;
-        auto& aln = g.second;
-
+    auto do_alignment = [&](alignment_t* aln,
+                            const string& name,
+                            const string& prepend) {
+        out << prepend << " ";
         // print out the stuff
         if (aln->IsReverseStrand())     out << "S"; else out << "s";
         if (aln->IsMateReverseStrand()) out << "O"; else out << "o";
@@ -1219,6 +1240,18 @@ const string HHGA::str(void) {
         out << aln->MapQuality;
         out << " " << aln->Name;
         out << endl;
+    };
+    
+    for (auto g : grouped_normal_alignments) {
+        auto& name = g.first;
+        auto& aln = g.second;
+        do_alignment(aln, name, "aln   ");
+    }
+
+    for (auto g : grouped_unitig_alignments) {
+        auto& name = g.first;
+        auto& aln = g.second;
+        do_alignment(aln, name, "unitig");
     }
 
     out << "p(obs|genotype)s ";
@@ -1286,9 +1319,10 @@ const string HHGA::vw(void) {
     }
 
     // do the row wise alignment features
-    for (auto g : grouped_alignments) {
+    for (auto g : grouped_normal_alignments) {
         auto& name = g.first;
         auto& aln = g.second;
+        
         out << "|aln" << name << " ";
         idx = 0;
         for (auto& allele : alignment_alleles[aln]) {
@@ -1300,14 +1334,14 @@ const string HHGA::vw(void) {
     int coln = 0;
     for (auto& allele : reference) { //this coud just be the lenght not sure where to get it from
         out << "|col" << coln << " ";
-        for (auto g : grouped_alignments) {
+        for (auto g : grouped_normal_alignments) {
             auto&  alle = alignment_alleles[g.second][coln];
             out << alle.alt << ":" << alle.prob << " ";
         }
         ++coln;
     }
     
-    for (auto g : grouped_alignments) {
+    for (auto g : grouped_normal_alignments) {
         auto& name = g.first;
         auto& aln = g.second;
         out << "|match" << name << " ";
@@ -1317,7 +1351,7 @@ const string HHGA::vw(void) {
         }
     }
 
-    for (auto g : grouped_alignments) {
+    for (auto g : grouped_normal_alignments) {
         auto& name = g.first;
         auto& aln = g.second;
         out << "|qual" << name << " ";
@@ -1326,6 +1360,29 @@ const string HHGA::vw(void) {
             out << w.first+1 << "H:" << w.second << " ";
         }
     }
+
+    // do the row wise unitig features
+    for (auto g : grouped_unitig_alignments) {
+        auto& name = g.first;
+        auto& aln = g.second;
+        out << "|unitig" << name << " ";
+        idx = 0;
+        for (auto& allele : alignment_alleles[aln]) {
+            out << ++idx << allele.alt << ":" << 1 << " "; //allele.prob << " ";
+        }
+    }
+
+    /*
+    for (auto g : grouped_unitig_alignments) {
+        auto& name = g.first;
+        auto& aln = g.second;
+        out << "|Umatch" << name << " ";
+        // match properties
+        for (auto w : matches[aln]) {
+            out << w.first+1 << "H:" << w.second << " ";
+        }
+    }
+    */
 
     out << "|depth ";
     out << "bam:" << alignment_count << " ";
@@ -1336,7 +1393,7 @@ const string HHGA::vw(void) {
         out << l.first << "G:" << l.second << " ";
     }
 
-    for (auto g : grouped_alignments) {
+    for (auto g : grouped_normal_alignments) {
         auto& name = g.first;
         auto& aln = g.second;
         out << "|properties" << name << " ";
