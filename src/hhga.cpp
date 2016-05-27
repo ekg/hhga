@@ -395,6 +395,7 @@ HHGA::HHGA(size_t window_length,
            const string& gt_class,
            int max_depth,
            int min_allele_count,
+           bool full_overlap,
            int max_node_size,
            bool multiclass,
            bool expon,
@@ -742,7 +743,6 @@ HHGA::HHGA(size_t window_length,
 
     // normalize away the VCF funk
     // by removing any reference-matching bases
-    bool shift_center = 0;
     if (has_insertion || has_deletion) {
         set<string> first_bases;
         for (auto& v : vhaps) {
@@ -754,7 +754,6 @@ HHGA::HHGA(size_t window_length,
                 auto& valleles = v.second;
                 valleles.front().alt = "M";
             }
-            shift_center = 1;
             // TODO it might be nice to re-center
             // but i'm not sure the right way to do it for insertions and deletions
         }
@@ -844,15 +843,10 @@ HHGA::HHGA(size_t window_length,
 
     map<int32_t, size_t> pos_max_length;
 
+    
     // trim the reads to the right size and determine the maximum indel length at each reference position
     for (auto a = alignment_alleles.begin(); a != alignment_alleles.end(); ++a) {
         vector<allele_t>& aln_alleles = a->second;
-        aln_alleles.erase(std::remove_if(aln_alleles.begin(), aln_alleles.end(),
-                                         [&](const allele_t& allele) {
-                                             return allele.position < begin_pos
-                                                                      || allele.position >= end_pos;
-                                         }),
-                          aln_alleles.end());
         map<int32_t, size_t> pos_counts;
         for (auto& allele : aln_alleles) {
             ++pos_counts[allele.position];
@@ -916,7 +910,7 @@ HHGA::HHGA(size_t window_length,
     pos_t msav_max = pos_proj.rbegin()->second;
     
     // where is the new center
-    pos_t center = pos_proj[make_pair(center_pos, 0)] + shift_center;
+    pos_t center = pos_proj[make_pair(center_pos, 0)];// + shift_center;
     //cerr << "center is " << center << endl;
     pos_t bal_min = max(center - window_length/2, (size_t)0);
     pos_t bal_max = bal_min + window_length;
@@ -962,15 +956,23 @@ HHGA::HHGA(size_t window_length,
         }
     }
 
+    for (auto& aln : alignments) {
+        if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        auto h = alignment_alleles[&aln];
+        missing_counts[&aln] = missing_count(h);
+    }
+    
     alignment_count = 0;
     for (auto& aln : alignments) {
         if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        if (full_overlap && missing_counts[&aln] > 0) continue;
         ++alignment_count;
     }
 
     // establish the allele/hap/ref matches
     for (auto& aln : alignments) {
         if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        if (full_overlap && missing_counts[&aln] > 0) continue;
         int i = 0;
         auto& weight = matches[&aln];
         for (auto& hap : haplotypes) {
@@ -984,6 +986,7 @@ HHGA::HHGA(size_t window_length,
     // sum up the quality support for the allele/hap/ref matches
     for (auto& aln : alignments) {
         if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        if (full_overlap && missing_counts[&aln] > 0) continue;
         int i = 0;
         auto& weight = qualsum[&aln];
         for (auto& hap : haplotypes) {
@@ -1000,6 +1003,7 @@ HHGA::HHGA(size_t window_length,
 
     for (auto& aln : alignments) {
         if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        if (full_overlap && missing_counts[&aln] > 0) continue;
         int i = 0;
         auto& prob = prob_aln_given_genotype[&aln];
         // for all possible genotype
@@ -1031,10 +1035,8 @@ HHGA::HHGA(size_t window_length,
     }
 
     auto aln_sort = [&](alignment_t* a1, alignment_t* a2) {
-        auto& h1 = alignment_alleles[a1];
-        auto& h2 = alignment_alleles[a2];
-        auto m1 = missing_count(h1);
-        auto m2 = missing_count(h2);
+        auto m1 = missing_counts[a1];
+        auto m2 = missing_counts[a2];
         if (m1 < m2) {
             return true;
         } else if (m1 == m2) {
@@ -1043,11 +1045,11 @@ HHGA::HHGA(size_t window_length,
             return false;
         }
     };
-
     
     // collect allele supports
     for (auto& aln : alignments) {
         if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        if (full_overlap && missing_counts[&aln] > 0) continue;
         // use all the best supports
         map<double, vector<int> > bests;
         for (int i = 0; i < haplotypes.size(); ++i) {
@@ -1078,6 +1080,7 @@ HHGA::HHGA(size_t window_length,
     //vector<alignment_t*> softclipped;
     for (auto& aln : alignments) {
         if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
+        if (full_overlap && missing_counts[&aln] > 0) continue;
         // if we have a softclip
         if (has_softclip(alignment_alleles[&aln])) {
             softclipped.push_back(&aln);
@@ -1192,24 +1195,16 @@ void HHGA::project_positions(vector<allele_t>& aln_alleles,
 vector<allele_t> HHGA::pad_alleles(vector<allele_t> aln_alleles,
                                    pos_t bal_min, pos_t bal_max) {
     vector<allele_t> padded;
-    // remove the bits outside the window
-    aln_alleles.erase(std::remove_if(aln_alleles.begin(), aln_alleles.end(),
-                                     [&](const allele_t& allele) {
-                                         return allele.position < bal_min;
-                                     }),
-                      aln_alleles.end());
     if (aln_alleles.empty()) return padded;
-    /*
-    cerr << "pre:    ";
-    for (auto& a : aln_alleles) cerr << a << " ";
-    cerr << endl;
-    */
-    // pad the sides
+
+    // remove the bits outside the window
     pos_t aln_start = aln_alleles.front().position;
     pos_t aln_end = aln_alleles.back().position;
+
+    // pad the sides
     if (aln_start > bal_max) return padded;
     // pad the beginning with "missing" features
-    for (int32_t q = bal_min; q != aln_start; ++q) {
+    for (int32_t q = bal_min; q < aln_start; ++q) {
         padded.push_back(allele_t("", "M", q, 1));
     }
     // pad the gaps

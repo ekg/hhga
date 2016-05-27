@@ -124,6 +124,7 @@ public:
     vector<pair<string, alignment_t*> > grouped_normal_alignments;
     vector<pair<string, alignment_t*> > grouped_unitig_alignments;
     map<string, map<int, int> > allele_counts;
+    map<alignment_t*, int> missing_counts;
 
     // the class label for the example
     string label;
@@ -163,6 +164,7 @@ public:
          const string& gt_class,
          int max_depth = 0,
          int min_allele_count = 0,
+         bool full_overlap = false,
          int max_node_size = 0,
          bool multiclass = false,
          bool expon = false,

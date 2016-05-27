@@ -26,6 +26,7 @@ void printUsage(int argc, char** argv) {
          << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
          << "    -x, --max-depth N     if depth is over N, downsample to N" << endl
          << "    -C, --min-count N     remove alleles observed less than N times (default: 0)" << endl
+         << "    -o, --full-overlap    only print alignments that have no missing cells in the final matrix" << endl
          << "    -s, --show-bases      show all the bases in the alignments instead of R ref match symbol" << endl
          << "    -a, --assume-ref      set missing sequences in the haps and genotypes to reference" << endl
          << "    -p, --binary-pred-in  stream in binary predictions and write annotated VCF" << endl
@@ -68,6 +69,7 @@ int main(int argc, char** argv) {
     int max_depth = 0;
     int max_node_size = 0;
     int min_allele_count = 0;
+    int full_overlap = false;
 
     // parse command-line options
     int c;
@@ -98,6 +100,7 @@ int main(int argc, char** argv) {
             {"multiclass", required_argument, 0, 'm'},
             {"max-depth", required_argument, 0, 'x'},
             {"min-count", required_argument, 0, 'C'},
+            {"full-overlap", no_argument, 0, 'o'},
             {"max-node-size", required_argument, 0, 'N'},
             {"debug", no_argument, 0, 'd'},
             {0, 0, 0, 0}
@@ -105,7 +108,7 @@ int main(int argc, char** argv) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:u:r:f:v:tc:w:dn:espg:S:Gmax:V:N:W:C:",
+        c = getopt_long (argc, argv, "hb:u:r:f:v:tc:w:dn:espg:S:Gmax:V:N:W:C:o",
                          long_options, &option_index);
 
         if (c == -1)
@@ -201,6 +204,10 @@ int main(int argc, char** argv) {
 
         case 'C':
             min_allele_count = atoi(optarg);
+            break;
+
+        case 'o':
+            full_overlap = true;
             break;
 
         case 'N':
@@ -371,6 +378,7 @@ int main(int argc, char** argv) {
                   gt_class,
                   max_depth,
                   min_allele_count,
+                  full_overlap,
                   max_node_size,
                   multiclass,
                   exponentiate,
