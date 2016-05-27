@@ -25,6 +25,7 @@ void printUsage(int argc, char** argv) {
          << "    -m, --multiclass      generate multiclass labels rather than single class assignment [BROKEN]" << endl
          << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
          << "    -x, --max-depth N     if depth is over N, downsample to N" << endl
+         << "    -C, --min-count N     remove alleles observed less than N times (default: 0)" << endl
          << "    -s, --show-bases      show all the bases in the alignments instead of R ref match symbol" << endl
          << "    -a, --assume-ref      set missing sequences in the haps and genotypes to reference" << endl
          << "    -p, --binary-pred-in  stream in binary predictions and write annotated VCF" << endl
@@ -66,6 +67,7 @@ int main(int argc, char** argv) {
     string sample_name;
     int max_depth = 0;
     int max_node_size = 0;
+    int min_allele_count = 0;
 
     // parse command-line options
     int c;
@@ -95,6 +97,7 @@ int main(int argc, char** argv) {
             {"sample-name", required_argument, 0, 'S'},
             {"multiclass", required_argument, 0, 'm'},
             {"max-depth", required_argument, 0, 'x'},
+            {"min-count", required_argument, 0, 'C'},
             {"max-node-size", required_argument, 0, 'N'},
             {"debug", no_argument, 0, 'd'},
             {0, 0, 0, 0}
@@ -102,7 +105,7 @@ int main(int argc, char** argv) {
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "hb:u:r:f:v:tc:w:dn:espg:S:Gmax:V:N:W:",
+        c = getopt_long (argc, argv, "hb:u:r:f:v:tc:w:dn:espg:S:Gmax:V:N:W:C:",
                          long_options, &option_index);
 
         if (c == -1)
@@ -194,6 +197,10 @@ int main(int argc, char** argv) {
 
         case 'x':
             max_depth = atoi(optarg);
+            break;
+
+        case 'C':
+            min_allele_count = atoi(optarg);
             break;
 
         case 'N':
@@ -363,6 +370,7 @@ int main(int argc, char** argv) {
                   class_label,
                   gt_class,
                   max_depth,
+                  min_allele_count,
                   max_node_size,
                   multiclass,
                   exponentiate,

@@ -17,6 +17,7 @@ output_dir=false
 sample_name=false
 max_depth=0
 exponentiate=false
+min_count=0
 
 if [ $# -eq 0 ];
 then
@@ -24,7 +25,7 @@ then
 fi
 
 # read the options
-TEMP=`getopt -o r:w:W:f:T:B:b:u:v:o:S:x:ehd --long region:,window:,graph-window:,fasta-ref:,truth:,targets:,sample:,bam:,vcf:,output:,max-depth:,exponentiate,help,debug -n 'hhga_region' -- "$@"`
+TEMP=`getopt -o r:w:W:f:T:B:b:u:v:o:S:x:C:ehd --long region:,window:,graph-window:,fasta-ref:,truth:,targets:,sample:,bam:,vcf:,output:,max-depth:,min-count:,exponentiate,help,debug -n 'hhga_region' -- "$@"`
 eval set -- "$TEMP"
 
 # extract options and their arguments into variables.
@@ -34,6 +35,7 @@ while true ; do
         -w|--window) window_size=$2 ; shift 2 ;;
         -W|--graph-window) graph_window=$2 ; shift 2 ;;
         -x|--max-depth) max_depth=$2 ; shift 2 ;;
+        -C|--min-count) min_count=$2 ; shift 2 ;;
         -f|--fasta-ref) ref=$2 ; shift 2 ;;
         -T|--truth) ground_truth=$2 ; shift 2 ;;
         -B|--targets) ground_callable=$2 ; shift 2 ;;
@@ -141,6 +143,7 @@ zcat $callable_variants \
 hhga -f $ref -r $region \
      -b $input_bam -v $labeled_variants \
      -w $window_size -x $max_depth \
+     -C $min_count \
      -g truth -S $sample_name \
      -V $graph_ref \
      -W $graph_window \

@@ -390,6 +390,7 @@ HHGA::HHGA(size_t window_length,
            const string& class_label,
            const string& gt_class,
            int max_depth,
+           int min_allele_count,
            int max_node_size,
            bool multiclass,
            bool expon,
@@ -783,6 +784,34 @@ HHGA::HHGA(size_t window_length,
 
     // do the same for QUAL
     call_info_num[input_name + "QUAL"] = var.quality;
+
+    // find alleles above a threshold rate of incidence
+    for (auto a = alignment_alleles.begin(); a != alignment_alleles.end(); ++a) {
+        vector<allele_t>& aln_alleles = a->second;
+        map<int, int> pos_count;
+        for (auto& allele : aln_alleles) {
+            allele_counts[allele.str()][pos_count[allele.position]++]++;
+        }
+    }
+
+    // keep only those alleles > our threshold
+    for (auto a = alignment_alleles.begin(); a != alignment_alleles.end(); ++a) {
+        vector<allele_t>& aln_alleles = a->second;
+        vector<allele_t> filtered_alleles;
+        int last_pos = 0;
+        map<int, int> pos_count;
+        for (auto& allele : aln_alleles) {
+            if (allele_counts[allele.str()][pos_count[allele.position]++] < min_allele_count) {
+                if (last_pos && last_pos != allele.position) {
+                    filtered_alleles.push_back(allele_t("", "M", allele.position, 1));
+                }
+            } else {
+                filtered_alleles.push_back(allele);
+            }
+            last_pos = allele.position;
+        }
+        aln_alleles = filtered_alleles;
+    }
 
     map<int32_t, size_t> pos_max_length;
 
@@ -1396,17 +1425,15 @@ const string HHGA::vw(void) {
         }
     }
 
-    /*
     for (auto g : grouped_unitig_alignments) {
         auto& name = g.first;
         auto& aln = g.second;
-        out << "|Umatch" << name << " ";
+        out << "|xmatch" << name << " ";
         // match properties
         for (auto w : matches[aln]) {
             out << w.first+1 << "H:" << w.second << " ";
         }
     }
-    */
 
     out << "|depth ";
     out << "bam:" << alignment_count << " ";

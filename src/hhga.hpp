@@ -47,6 +47,7 @@ public:
         s << position << ":" << ref << "/" << alt;
         repr = s.str();
     }
+    const string str(void) const { stringstream s; s << position << ":" << ref << "/" << alt; return s.str(); }
 };
 
 short qualityChar2ShortInt(char c);
@@ -122,6 +123,7 @@ public:
     map<alignment_t*, vector<string> > alignment_groups;
     vector<pair<string, alignment_t*> > grouped_normal_alignments;
     vector<pair<string, alignment_t*> > grouped_unitig_alignments;
+    map<string, map<int, int> > allele_counts;
 
     // the class label for the example
     string label;
@@ -160,6 +162,7 @@ public:
          const string& class_label,
          const string& gt_class,
          int max_depth = 0,
+         int min_allele_count = 0,
          int max_node_size = 0,
          bool multiclass = false,
          bool expon = false,
