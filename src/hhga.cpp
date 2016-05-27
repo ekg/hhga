@@ -320,6 +320,7 @@ double pairwise_qualsum(const vector<allele_t>& h1, const vector<allele_t>& h2) 
         auto a1 = p1[p.first]->alt;
         if (p2.find(p.first) == p2.end()) continue;
         auto a2 = p2[p.first]->alt;
+        //if (possible > 1 && a1 == "R" && a1 == "R") continue; // avoid counting ref bases in indels
         if (a1 == "M" || a2 == "M") continue;
         if (a1 == a2) {
             qualsum += p.second->prob;
@@ -332,24 +333,27 @@ double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2)
     int count = 0;
     // assert they are normalized
     // that given, we can compare directly
+    // if we have a pure reference pair of alleles
+    // the match is 1
+    // otherwise, we measure identity in terms of the number of non-ref positions that match
     map<int, const allele_t*> p1;
     map<int, const allele_t*> p2;
     for (size_t i = 0; i < h1.size(); ++i) {
+        if (h1[i].alt == "M") continue;
         p1[i] = &h1[i];
     }
     for (size_t i = 0; i < h2.size(); ++i) {
+        if (h2[i].alt == "M") continue;
         p2[i] = &h2[i];
     }
-    int possible = 0;
+    int possible = p2.size();
+    int seen = 0;
     for (auto& p : p2) {
-        auto a2 = p.second->alt;
-        if (a2 != "M") ++possible;
-    }
-    for (auto& p : p1) {
-        auto a1 = p1[p.first]->alt;
-        if (p2.find(p.first) == p2.end()) continue;
         auto a2 = p2[p.first]->alt;
+        if (p1.find(p.first) == p1.end()) continue;
+        auto a1 = p1[p.first]->alt;
         if (a1 == "M" || a2 == "M") continue;
+        ++seen;
         if (a1 == a2) {
             ++count;
         }
@@ -428,6 +432,7 @@ HHGA::HHGA(size_t window_length,
     int32_t end_pos = begin_pos + window_length;
     string seq_name = var.sequenceName;
     int32_t center_pos = var.position-1;//begin_pos + (end_pos - begin_pos) / 2;
+    //int32_t center_pos = var.position-1 + var.ref.size()/2;
 
     // we'll use this later to cut and pad the matrix
     string window_ref_seq = fasta_ref.getSubSequence(seq_name, begin_pos, window_length);
@@ -691,6 +696,8 @@ HHGA::HHGA(size_t window_length,
 
     // handle out input haplotypes
     // note that parsedalternates is giving us 1-based positions
+    bool has_insertion = false;
+    bool has_deletion = false;
     for (auto& p : var.parsedAlternates()) {
         auto& valleles = vhaps[p.first];
         for (auto& a : p.second) {
@@ -704,12 +711,14 @@ HHGA::HHGA(size_t window_length,
             } else {
                 // cluster insertions behind the previous base
                 if (a.ref.empty()) {
+                    has_insertion = true;
                     for (size_t i = 0; i < a.alt.size(); ++i) {
                         valleles.push_back(allele_t("U",
                                                     a.alt.substr(i,1),
                                                     a.position-2, 1));
                     }
                 } else if (a.alt.empty()) {
+                    has_deletion = true;
                     // deletions get broken into individual bases
                     for (size_t i = 0; i < a.ref.size(); ++i) {
                         valleles.push_back(allele_t(a.ref.substr(i,1),
@@ -728,6 +737,26 @@ HHGA::HHGA(size_t window_length,
                                         "U",
                                         valleles.back().position,
                                         1));
+        }
+    }
+
+    // normalize away the VCF funk
+    // by removing any reference-matching bases
+    bool shift_center = 0;
+    if (has_insertion || has_deletion) {
+        set<string> first_bases;
+        for (auto& v : vhaps) {
+            auto& valleles = v.second;
+            first_bases.insert(valleles[0].alt);
+        }
+        if (first_bases.size() == 1) {
+            for (auto& v : vhaps) {
+                auto& valleles = v.second;
+                valleles.front().alt = "M";
+            }
+            shift_center = 1;
+            // TODO it might be nice to re-center
+            // but i'm not sure the right way to do it for insertions and deletions
         }
     }
 
@@ -887,7 +916,7 @@ HHGA::HHGA(size_t window_length,
     pos_t msav_max = pos_proj.rbegin()->second;
     
     // where is the new center
-    pos_t center = pos_proj[make_pair(center_pos, 0)];
+    pos_t center = pos_proj[make_pair(center_pos, 0)] + shift_center;
     //cerr << "center is " << center << endl;
     pos_t bal_min = max(center - window_length/2, (size_t)0);
     pos_t bal_max = bal_min + window_length;
