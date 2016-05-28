@@ -1383,7 +1383,9 @@ const string HHGA::vw(void) {
         ++i;
         idx = 0;
         for (auto& allele : hap) {
-            out << ++idx << allele.alt << ":" << allele.prob << " ";;
+            if (allele.alt != "M") {
+                out << ++idx << allele.alt << ":" << allele.prob << " ";;
+            }
         }
     }
     i = 1;
@@ -1393,7 +1395,9 @@ const string HHGA::vw(void) {
         ++i;
         idx = 0;
         for (auto& allele : geno) {
-            out << ++idx << allele.alt << ":" << allele.prob << " ";;
+            if (allele.alt != "M") {
+                out << ++idx << allele.alt << ":" << allele.prob << " ";
+            }
         }
     }
 
