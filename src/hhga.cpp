@@ -1105,14 +1105,16 @@ HHGA::HHGA(size_t window_length,
                 // we limit ourselves to only 7 alleles, 1 softclip (=9) and 1 degenerate (OB=8)
                 if (unitigs.count(aln)) {
                     ss << min(supp.first, 8) << "u" << u++;
+                    if (max_depth && u+i > max_depth) break;
                 } else {
                     if (aln->IsReverseStrand()) {
+                        if (max_depth && i >= max_depth) continue;
                         ss << min(supp.first, 8) << "-" << i++;
                     } else {
+                        if (max_depth && j >= max_depth) continue;
                         ss << min(supp.first, 8) << "+" << j++;
                     }
                 }
-                if (max_depth && j+i > max_depth) break;
                 alignment_groups[aln].push_back(ss.str());
                 if (!unitigs.count(aln)) {
                     grouped_normal_alignments.push_back(make_pair(ss.str(), aln));
