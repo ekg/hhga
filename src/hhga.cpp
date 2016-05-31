@@ -383,6 +383,147 @@ void HHGA::missing_to_ref(vector<vector<allele_t> >& obs) {
     }
 }
 
+map<string, int> repeat_counts(int position, const string& sequence, int maxsize) {
+    map<string, int> counts;
+    for (int i = 1; i <= maxsize; ++i) {
+        // subseq here i bases
+        string seq = sequence.substr(position, i);
+        // go left.
+
+        int j = position - i;
+        int leftsteps = 0;
+        while (j >= 0 && seq == sequence.substr(j, i)) {
+            j -= i;
+            ++leftsteps;
+        }
+
+        // go right.
+        j = position;
+
+        int rightsteps = 0;
+        while (j + i <= sequence.size() && seq == sequence.substr(j, i)) {
+            j += i;
+            ++rightsteps;
+        }
+        // if we went left and right a non-zero number of times, 
+        if (leftsteps + rightsteps > 1) {
+            counts[seq] = leftsteps + rightsteps;
+        }
+    }
+
+    // filter out redundant repeat information
+    if (counts.size() > 1) {
+        map<string, int> filteredcounts;
+        map<string, int>::iterator c = counts.begin();
+        string prev = c->first;
+        filteredcounts[prev] = c->second;  // shortest sequence
+        ++c;
+        for (; c != counts.end(); ++c) {
+            int i = 0;
+            string seq = c->first;
+            while (i + prev.length() <= seq.length() && seq.substr(i, prev.length()) == prev) {
+                i += prev.length();
+            }
+            if (i < seq.length()) {
+                filteredcounts[seq] = c->second;
+                prev = seq;
+            }
+        }
+        return filteredcounts;
+    } else {
+        return counts;
+    }
+}
+
+double entropy(const string& st) {
+    vector<char> stvec(st.begin(), st.end());
+    set<char> alphabet(stvec.begin(), stvec.end());
+    vector<double> freqs;
+    for (set<char>::iterator c = alphabet.begin(); c != alphabet.end(); ++c) {
+        int ctr = 0;
+        for (vector<char>::iterator s = stvec.begin(); s != stvec.end(); ++s) {
+            if (*s == *c) {
+                ++ctr;
+            }
+        }
+        freqs.push_back((double)ctr / (double)stvec.size());
+    }
+    double ent = 0;
+    double ln2 = log(2);
+    for (vector<double>::iterator f = freqs.begin(); f != freqs.end(); ++f) {
+        ent += *f * log(*f)/ln2;
+    }
+    ent = -ent;
+    return ent;
+}
+
+bool is_repeat_unit(const string& seq, const string& unit) {
+    if (seq.size() % unit.size() != 0) {
+        return false;
+    } else {
+        int maxrepeats = seq.size() / unit.size();
+        for (int i = 0; i < maxrepeats; ++i) {
+            if (seq.substr(i * unit.size(), unit.size()) != unit) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
+string repeat(const string& s, int n) {
+    ostringstream os;
+    for(int i = 0; i < n; i++)
+        os << s;
+    return os.str();
+}
+
+int callable_window(int pos,
+                    string sequence,
+                    string alleleseq,
+                    int min_repeat_size,
+                    double min_entropy) {
+
+    // force the callable window to extend across
+    // tandem repeats and homopolymers when indels are present
+    int right_boundary = pos;
+    for (auto& r : repeat_counts(pos, sequence, 12)) {
+        auto repeatunit = r.first;
+        int rptcount = r.second;
+        string repeatstr = repeat(repeatunit, rptcount);
+        // assumption of left-alignment may be problematic... so this should be updated
+        if (repeatstr.size() >= min_repeat_size && is_repeat_unit(alleleseq, repeatunit)) {
+            // determine the boundaries of the repeat
+            // adjust to ensure we hit the first of the repeatstr
+            size_t startpos = sequence.find(repeatstr, max((long int) 0, pos - (long int) repeatstr.size() - 1));
+            long int leftbound = startpos;
+            if (startpos == string::npos) {
+                cerr << "could not find repeat sequence?" << endl;
+                cerr << "repeat sequence: " << repeatstr << endl;
+                cerr << sequence << endl;
+                cerr << "matched repeats:" << endl;
+                break; // ignore right-repeat boundary in this case
+            }
+            right_boundary = leftbound + repeatstr.size() + 1; // 1 past edge of repeat
+        }
+    }
+
+    while (min_entropy > 0 && // ignore if turned off
+           right_boundary - pos < sequence.size() && //guard
+           entropy(sequence.substr(pos, right_boundary - pos)) < min_entropy) {
+        ++right_boundary;
+    }
+
+    return right_boundary;
+    // edge case, the indel is an insertion and matches the reference to the right
+    // this means there is a repeat structure in the read, but not the ref
+    /*
+    if (currentSequence.substr(pos - currentSequenceStart, length) == readSequence) {
+        repeatRightBoundary = max(repeatRightBoundary, pos + length + 1);
+    }
+    */
+}
+
 HHGA::HHGA(size_t window_length,
            BamTools::BamMultiReader& bam_reader,
            BamTools::BamMultiReader& unitig_reader,

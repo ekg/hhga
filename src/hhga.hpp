@@ -90,6 +90,15 @@ double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2)
 double pairwise_qualsum(const vector<allele_t>& h1, const vector<allele_t>& h2);
 int missing_count(const vector<allele_t>& hap);
 pair<int, int> pair_for_gt_class(int gt);
+double entropy(const string& st);
+bool is_repeat_unit(const string& seq, const string& unit);
+string repeat(const string& s, int n);
+map<string, int> repeat_counts(int position, const string& sequence, int maxsize);
+int callable_window(int pos,
+                    string sequence,
+                    string alleleseq,
+                    int min_repeat_size,
+                    double min_repeat_entropy);
 
 class HHGA {
 public:
