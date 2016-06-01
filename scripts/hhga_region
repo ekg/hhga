@@ -19,6 +19,7 @@ max_depth=0
 exponentiate=false
 min_count=0
 full_overlap=false
+min_entropy=0
 
 if [ $# -eq 0 ];
 then
@@ -26,7 +27,7 @@ then
 fi
 
 # read the options
-TEMP=`getopt -o r:w:W:f:T:B:b:u:v:o:S:x:C:Oehd --long region:,window:,graph-window:,fasta-ref:,truth:,targets:,sample:,bam:,vcf:,output:,max-depth:,min-count:,full-overlap,exponentiate,help,debug -n 'hhga_region' -- "$@"`
+TEMP=`getopt -o r:w:W:f:T:B:b:u:v:o:S:x:C:E:Oehd --long region:,window:,graph-window:,fasta-ref:,truth:,targets:,sample:,bam:,vcf:,output:,max-depth:,min-count:,min-entropy:,full-overlap,exponentiate,help,debug -n 'hhga_region' -- "$@"`
 eval set -- "$TEMP"
 
 # extract options and their arguments into variables.
@@ -37,6 +38,7 @@ while true ; do
         -W|--graph-window) graph_window=$2 ; shift 2 ;;
         -x|--max-depth) max_depth=$2 ; shift 2 ;;
         -C|--min-count) min_count=$2 ; shift 2 ;;
+        -E|--min-entropy) min_entropy=$2 ; shift 2 ;;
         -f|--fasta-ref) ref=$2 ; shift 2 ;;
         -T|--truth) ground_truth=$2 ; shift 2 ;;
         -B|--targets) ground_callable=$2 ; shift 2 ;;
@@ -79,6 +81,8 @@ then
     echo "    -x, --max-depth arg    use only the first arg alignments"
     #    echo "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]"
     echo "    -O, --full-overlap     only print alignments that have no missing cells in the final matrix"
+    echo "    -C, --min-count arg    low-frequency error filter; require more than this number of observations to retain"
+    echo "    -E, --min-entropy arg  require at list this entropy in the reference window that we require reads to cover"
     echo "    -T, --truth arg        the VCF file used as the truth set"
     echo "    -V, --graph-vcf arg    the VCF file used as the reference graph set"
     echo "    -B, --targets arg      targets to use in the comparison with the truth set"
@@ -150,6 +154,7 @@ hhga -f $ref -r $region \
      -g truth -S $sample_name \
      -V $graph_ref \
      -W $graph_window \
+     -E $min_entropy \
      $(if [[ "$full_overlap" != false ]]; then echo --full-overlap; fi) \
      $(if [[ "$input_unitigs" != false ]]; then echo -u $input_unitigs; fi) \
     | gzip >$hhga_genotypes

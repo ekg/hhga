@@ -478,43 +478,50 @@ string repeat(const string& s, int n) {
     return os.str();
 }
 
-int callable_window(int pos,
-                    string sequence,
-                    string alleleseq,
-                    int min_repeat_size,
-                    double min_entropy) {
+pair<int, int> callable_window(int pos,
+                               string sequence,
+                               string alleleseq,
+                               int min_repeat_size,
+                               double min_entropy) {
 
     // force the callable window to extend across
     // tandem repeats and homopolymers when indels are present
-    int right_boundary = pos;
-    for (auto& r : repeat_counts(pos, sequence, 12)) {
+    int right_boundary = pos+1;
+    int left_boundary = pos;
+    // check for repeats of up to length 16
+    for (auto& r : repeat_counts(pos, sequence, 16)) {
         auto repeatunit = r.first;
         int rptcount = r.second;
+        //cerr << repeatunit << ":" << rptcount << endl;
         string repeatstr = repeat(repeatunit, rptcount);
         // assumption of left-alignment may be problematic... so this should be updated
-        if (repeatstr.size() >= min_repeat_size && is_repeat_unit(alleleseq, repeatunit)) {
+        if (repeatstr.size() >= min_repeat_size) { // && is_repeat_unit(alleleseq, repeatunit)) {
             // determine the boundaries of the repeat
             // adjust to ensure we hit the first of the repeatstr
-            size_t startpos = sequence.find(repeatstr, max((long int) 0, pos - (long int) repeatstr.size() - 1));
-            long int leftbound = startpos;
+            size_t startpos = sequence.find(repeatstr, pos-1-repeatstr.size());
+            left_boundary = min((int)startpos, left_boundary);
             if (startpos == string::npos) {
+                /*
                 cerr << "could not find repeat sequence?" << endl;
                 cerr << "repeat sequence: " << repeatstr << endl;
                 cerr << sequence << endl;
                 cerr << "matched repeats:" << endl;
+                */
                 break; // ignore right-repeat boundary in this case
             }
-            right_boundary = leftbound + repeatstr.size() + 1; // 1 past edge of repeat
+            right_boundary = max(right_boundary, (int)(left_boundary + repeatstr.size() + 1)); // 1 past edge of repeat
         }
     }
 
     while (min_entropy > 0 && // ignore if turned off
-           right_boundary - pos < sequence.size() && //guard
-           entropy(sequence.substr(pos, right_boundary - pos)) < min_entropy) {
+           left_boundary > 0 &&
+           right_boundary < sequence.size()-1 && //guard
+           entropy(sequence.substr(left_boundary, right_boundary - left_boundary)) < min_entropy) {
+        --left_boundary;
         ++right_boundary;
     }
 
-    return right_boundary;
+    return make_pair(left_boundary, right_boundary);
     // edge case, the indel is an insertion and matches the reference to the right
     // this means there is a repeat structure in the read, but not the ref
     /*
@@ -536,6 +543,7 @@ HHGA::HHGA(size_t window_length,
            const string& gt_class,
            int max_depth,
            int min_allele_count,
+           double min_repeat_entropy,
            bool full_overlap,
            int max_node_size,
            bool multiclass,
@@ -570,6 +578,7 @@ HHGA::HHGA(size_t window_length,
         ++i;
     }
 
+
     int32_t begin_pos = var.position-1 - window_length/2;
     int32_t end_pos = begin_pos + window_length;
     string seq_name = var.sequenceName;
@@ -579,6 +588,23 @@ HHGA::HHGA(size_t window_length,
     // we'll use this later to cut and pad the matrix
     string window_ref_seq = fasta_ref.getSubSequence(seq_name, begin_pos, window_length);
 
+    int repeat_window_length = window_length * 8;
+    int repeat_window_start = var.position-1 - repeat_window_length/2;
+    string repeat_window = fasta_ref.getSubSequence(seq_name, repeat_window_start, repeat_window_length);;
+    int callable_begin_pos = repeat_window_start + repeat_window_length/2 +1;
+    int callable_end_pos = repeat_window_start + repeat_window_length/2 +1;
+    for (auto& allele_seq : var.alleles) {
+        auto f = callable_window(repeat_window_length/2 +2,
+                                 repeat_window,
+                                 allele_seq,
+                                 3, min_repeat_entropy);
+        //cerr << "callable window for " << allele_seq << " " << f.first << "-" << f.second << endl;
+        callable_begin_pos = min((int)(repeat_window_start + f.first), callable_begin_pos);
+        callable_end_pos = max((int)(repeat_window_start + f.second), callable_end_pos);
+    }
+
+    //cerr << "callable window for site " << callable_begin_pos << "-" << callable_end_pos << endl;
+    
     //vcflib::VariantCallFile& graph_vcf;
     stringstream targetss;
     auto graph_begin_pos = var.position-1 - graph_window/2;
@@ -646,6 +672,8 @@ HHGA::HHGA(size_t window_length,
     long int lowestReferenceBase = 0;
     long unsigned int referenceBases = 0;
     unsigned int currentRefSeqID = 0;
+    bool biallelic_snp = var.alleles.size() == 2 && var.ref.size() == 1 && var.alleles.back().size() == 1;
+    bool use_repeat_window = min_repeat_entropy && !biallelic_snp;
 
     // set up our readers
     set_region(bam_reader, seq_name, begin_pos, end_pos);
@@ -654,7 +682,12 @@ HHGA::HHGA(size_t window_length,
     BamTools::BamAlignment aln;
     while (bam_reader.GetNextAlignment(aln)) {
         if (aln.IsMapped()) {
-            alignments.push_back(aln);
+            if (!use_repeat_window) {
+                alignments.push_back(aln);
+            } else if (aln.Position <= callable_begin_pos
+                       && aln.GetEndPosition() > callable_end_pos) {
+                alignments.push_back(aln);
+            }
         }
     }
 
@@ -676,9 +709,16 @@ HHGA::HHGA(size_t window_length,
     int unitig_count = 0;
     while (unitig_reader.GetNextAlignment(aln)) {
         if (aln.IsMapped()) {
-            alignments.push_back(aln);
-            ++unitig_count;
-            unitigs.insert(&alignments.back());
+            if (!use_repeat_window) {
+                alignments.push_back(aln);
+                ++unitig_count;
+                unitigs.insert(&alignments.back());
+            } else if (aln.Position <= callable_begin_pos
+                       && aln.GetEndPosition() > callable_end_pos) {
+                alignments.push_back(aln);
+                ++unitig_count;
+                unitigs.insert(&alignments.back());
+            }
         }
     }
 

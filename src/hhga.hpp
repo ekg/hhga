@@ -94,11 +94,11 @@ double entropy(const string& st);
 bool is_repeat_unit(const string& seq, const string& unit);
 string repeat(const string& s, int n);
 map<string, int> repeat_counts(int position, const string& sequence, int maxsize);
-int callable_window(int pos,
-                    string sequence,
-                    string alleleseq,
-                    int min_repeat_size,
-                    double min_repeat_entropy);
+pair<int, int> callable_window(int pos,
+                               string sequence,
+                               string alleleseq,
+                               int min_repeat_size,
+                               double min_repeat_entropy);
 
 class HHGA {
 public:
@@ -173,6 +173,7 @@ public:
          const string& gt_class,
          int max_depth = 0,
          int min_allele_count = 0,
+         double min_repeat_entropy = 0,
          bool full_overlap = false,
          int max_node_size = 0,
          bool multiclass = false,
