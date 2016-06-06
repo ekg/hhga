@@ -15,7 +15,7 @@
 #include <cmath>
 #include <iomanip>
 #include "vg.hpp"
-
+#include "multichoose.h"
 #include "join.h"
 
 namespace hhga {
@@ -78,18 +78,11 @@ std::vector<std::string> &split_delims(const std::string &s,
 std::vector<std::string> split_delims(const std::string &s,
                                       const std::string& delims);
 
-string label_for_genotype(const string& gt);
-string genotype_for_label(const string& gt, int alt_count);
-string genotype_for_labels(const map<string, double>& gt,
-                           int alt_count);
-string multiclass_label_for_genotype(const string& gt);
-map<int, double> labels_for_genotype(const string& gt);
 map<int, double> test_labels(int alt_count);
 // fraction of times where both are non-missing where they agree
 double pairwise_identity(const vector<allele_t>& h1, const vector<allele_t>& h2);
 double pairwise_qualsum(const vector<allele_t>& h1, const vector<allele_t>& h2);
 int missing_count(const vector<allele_t>& hap);
-pair<int, int> pair_for_gt_class(int gt);
 double entropy(const string& st);
 bool is_repeat_unit(const string& seq, const string& unit);
 string repeat(const string& s, int n);
@@ -99,6 +92,11 @@ pair<int, int> callable_window(int pos,
                                string alleleseq,
                                int min_repeat_size,
                                double min_repeat_entropy);
+vector<vector<int> > possible_genotypes(int allele_count, int ploidy);
+string string_for_genotype(const vector<int>& gt);
+int label_for_genotype(const string& gt, const vector<vector<int> >& genotypes);
+string genotype_for_label(int label, const vector<vector<int> >& genotypes);
+pair<int, int> pair_for_gt_class(int gt);
 
 class HHGA {
 public:
@@ -171,12 +169,12 @@ public:
          const string& input_name,
          const string& class_label,
          const string& gt_class,
+         const vector<vector<int> >& all_genotypes,
          int max_depth = 0,
          int min_allele_count = 0,
          double min_repeat_entropy = 0,
          bool full_overlap = false,
          int max_node_size = 0,
-         bool multiclass = false,
          bool expon = false,
          bool show_bases = false,
          bool assume_ref = true);

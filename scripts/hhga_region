@@ -108,6 +108,7 @@ callable_variants=$output_dir/$region.callable.vcf.gz
 uncallable_variants=$output_dir/$region.uncallable.vcf.gz
 labeled_variants=$output_dir/$region.label.vcf.gz
 hhga_genotypes=$output_dir/$region.hhga.gz
+processed_bam=$output_dir/$region.bam
 
 if [[ $graph_ref == false ]];
 then
@@ -125,6 +126,7 @@ tabix -h $ground_truth $region \
     | vt normalize -r $ref -q - 2>/dev/null \
     | vcfgeno2haplo -r $ref -w 0 \
     | vcffixup - \
+    | vcfcreatemulti \
     | vcfunphase - \
     | vcfnull2ref - \
     | bgziptabix $ground_region
@@ -133,6 +135,8 @@ tabix -h $variant_calls $region \
     | vcfallelicprimitives -kg \
     | vt normalize -r $ref -q - 2>/dev/null \
     | vcfgeno2haplo -r $ref -w 0 \
+    | vcffixup - \
+    | vcfcreatemulti \
     | vcfunphase - \
     | vcfnull2ref - \
     | vcfstreamsort -w 100000 | bgziptabix $normalized_variants
@@ -147,8 +151,16 @@ zcat $callable_variants \
     | vcfannotategenotypes truth $callable_variants - \
     | bgziptabix $labeled_variants
 
+samtools view -b $input_bam $region \
+    | glia -Rru -w 1500 -S 200 -Q 200 -G 4 -f $ref -v $normalized_variants \
+    | bamleftalign -f $ref \
+           >$processed_bam.tmp
+samtools sort $processed_bam.tmp -o /dev/stdout >$processed_bam
+rm -f $processed_bam.tmp
+samtools index $processed_bam
+
 hhga -f $ref -r $region \
-     -b $input_bam -v $labeled_variants \
+     -b $processed_bam -v $labeled_variants \
      -w $window_size -x $max_depth \
      -C $min_count \
      -g truth -S $sample_name \
@@ -166,5 +178,7 @@ then
     rm -f $callable_variants*
     rm -f $uncallable_variants*
     rm -f $labeled_variants*
+    rm -f $processed_bam*
+    rm -f $processed_unitigs*
 fi
 

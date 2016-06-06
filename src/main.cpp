@@ -22,7 +22,6 @@ void printUsage(int argc, char** argv) {
          << "    -t, --text-viz        make a human-readible, compact output" << endl
          << "    -c, --class-label X   add this label (e.g. -1 for false, 1 for true)" << endl
          << "    -g, --gt-class FIELD  use this sample field to make genotype class labels" << endl
-         << "    -m, --multiclass      generate multiclass labels rather than single class assignment [BROKEN]" << endl
          << "    -e, --exponentiate    convert features that come PHRED-scaled to [0,1]" << endl
          << "    -x, --max-depth N     if depth is over N, downsample to N" << endl
          << "    -C, --min-count N     remove alleles observed less than N times (default: 0)" << endl
@@ -65,7 +64,6 @@ int main(int argc, char** argv) {
     bool binary_predictions_in = false;
     bool genotype_predictions_in = false;
     string gt_class;
-    bool multiclass = false;
     string sample_name;
     int max_depth = 0;
     int max_node_size = 0;
@@ -99,7 +97,6 @@ int main(int argc, char** argv) {
             {"bin-pred-in", no_argument, 0, 'p'},
             {"gt-pred-in", no_argument, 0, 'G'},
             {"sample-name", required_argument, 0, 'S'},
-            {"multiclass", required_argument, 0, 'm'},
             {"max-depth", required_argument, 0, 'x'},
             {"min-count", required_argument, 0, 'C'},
             {"full-overlap", no_argument, 0, 'o'},
@@ -197,10 +194,6 @@ int main(int argc, char** argv) {
             genotype_predictions_in = true;
             break;
 
-        case 'm':
-            multiclass = true;
-            break;
-
         case 'x':
             max_depth = atoi(optarg);
             break;
@@ -235,6 +228,9 @@ int main(int argc, char** argv) {
         }
     }
 
+    // get the allowed genotypes (static but should be made configurable)
+    auto all_genotypes = possible_genotypes(16, 2);
+    
     if (binary_predictions_in
         || genotype_predictions_in) {
 
@@ -302,7 +298,7 @@ int main(int argc, char** argv) {
                 if (genotype_predictions_in) {
                     var.samples[sample_name]["GT"].clear();
                     var.samples[sample_name]["GT"].push_back(
-                        genotype_for_label(prediction, var.alt.size()));
+                        genotype_for_label(atoi(prediction.c_str()), all_genotypes));
                     var.format.push_back("GT");
                 }
                 cout << var << endl;
@@ -369,6 +365,7 @@ int main(int argc, char** argv) {
     if (!region_string.empty()) {
         set_region(vcf_file, region_string);
     }
+
     // iterate through all the vcf records, building one hhga matrix for each
     vcflib::Variant var(vcf_file);
     while (vcf_file.getNextVariant(var)) {
@@ -383,12 +380,12 @@ int main(int argc, char** argv) {
                   vcf_feature_prefix,
                   class_label,
                   gt_class,
+                  all_genotypes,
                   max_depth,
                   min_allele_count,
                   min_repeat_entropy,
                   full_overlap,
                   max_node_size,
-                  multiclass,
                   exponentiate,
                   show_bases,
                   assume_ref);

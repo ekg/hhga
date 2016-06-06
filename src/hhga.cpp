@@ -146,56 +146,51 @@ void set_region(vcflib::VariantCallFile& vcffile, const string& region_str) {
     }
 }
 
-string label_for_genotype(const string& gt) {
-    if        (gt == "0/0") {
-        return "1";
-    } else if (gt == "0/1") {
-        return "2";
-    } else if (gt == "0/2") {
-        return "3";
-    } else if (gt == "1/1") {
-        return "4";
-    } else if (gt == "1/2") {
-        return "5";
-    } else if (gt == "2/2") {
-        return "6";
-    } else {
-        cerr << "warning: unknown genotype '" << gt << "'" << endl;
-        return "7";
-    }
+vector<vector<int> > possible_genotypes(int allele_count, int ploidy) {
+    vector<int> alleles;
+    for (int i = 0; i < allele_count; ++i) alleles.push_back(i);
+    return multichoose(ploidy, alleles);
 }
 
-string genotype_for_label(const string& gt, int alt_count) {
-    if        (gt == "1") {
-        return "0/0";
-    } else if (gt == "2") {
-        return "0/1";
-    } else if (gt == "3") {
-        if (alt_count > 1) {
-            return "0/2";
-        } else {
-            // emit a valid het if we don't have 2 alts
-            return "0/1";
+vector<int> genotype_for_string(const string& gt) {
+    auto gtvs = split(gt, "/|");
+    vector<int> gtvi;
+    for (auto& s : gtvs) {
+        gtvi.push_back(atoi(s.c_str()));
+    }
+    std::sort(gtvi.begin(), gtvi.end());
+    return gtvi;
+}
+
+string string_for_genotype(const vector<int>& gt) {
+    vector<string> gs;
+    for (auto& i : gt) {
+        gs.push_back(convert(i));
+    }
+    return join(gs, "/");
+}
+
+int label_for_genotype(const string& gt, const vector<vector<int> >& genotypes) {
+    //auto genotypes = possible_genotypes(allele_count, ploidy);
+    // split the string and turn it into a vector
+    auto genotype = genotype_for_string(gt);
+    int i = 0;
+    for (auto& s : genotypes) {
+        ++i;
+        if (s == genotype) {
+            return i;
         }
-    } else if (gt == "4") {
-        return "1/1";
-    } else if (gt == "5") {
-        if (alt_count > 1) {
-            return "1/2";
-        } else {
-            // emit a valid het if we don't have 2 alts
-            return "0/1";
-        }
-    } else if (gt == "6") {
-        if (alt_count > 1) {
-            return "2/2";
-        } else {
-            // emit a valid hom if we don't have 2 alts
-            return "1/1";
-        }
+    }
+    cerr << "warning: unknown genotype '" << gt << "'" << endl;
+    return genotypes.size()+1;
+}
+
+string genotype_for_label(int label, const vector<vector<int> >& genotypes) {
+    if (label > genotypes.size()) {
+        cerr << "warning: unknown label '" << label << "'" << endl;
+        return "./.";        
     } else {
-        //cerr << "warning: unknown genotype '" << gt << "'" << " expected one of 0/0, 0/1, 0/2, 1/1, 1/2, 2/2" << endl;
-        return "./.";
+        return string_for_genotype(genotypes.at(label));
     }
 }
 
@@ -205,51 +200,6 @@ map<int, double> test_labels(int alt_count) {
         labels[i] = 0;
     }
     return labels;
-}
-
-string multiclass_label_for_genotype(const string& gt) {
-    vector<string> label;
-    auto labg = labels_for_genotype(gt);
-    for (auto m : labg) {
-        stringstream lss;
-        lss << m.first << ":" << m.second;
-        label.push_back(lss.str());
-    }
-    return join(label, " ");
-}
-
-map<int, double> labels_for_genotype(const string& gt) {
-    map<int, double> labels;
-    for (auto allele : vcflib::decomposeGenotype(gt)) {
-        labels[allele.first+1] = allele.second;
-    }
-    return labels;
-}
-
-string genotype_for_labels(const map<int, double>& gt,
-                           int alt_count) {
-    // count up weight until we get to 2
-    map<double, vector<int> > allele_by_weight;
-    for (auto& g : gt) {
-        allele_by_weight[g.second].push_back(g.first);
-    }
-    vector<pair<double, int> > flattened_by_weight;
-    for (auto& a : allele_by_weight) {
-        for (auto& v : a.second) {
-            flattened_by_weight.push_back(make_pair(a.first, v));
-        }
-    }
-    double weight = 0;
-    vector<string> gts;
-    for (auto& w : flattened_by_weight) {
-        int count = round(w.first);
-        for (int i = 0; i < count; ++i) {
-            gts.push_back(std::to_string(w.second-1));
-        }
-        weight += count;
-        if (weight >= 2) break; // diploid
-    }
-    return join(gts, "/");
 }
 
 pair<int, int> pair_for_gt_class(int gt) {
@@ -541,12 +491,12 @@ HHGA::HHGA(size_t window_length,
            const string& input_name,
            const string& class_label,
            const string& gt_class,
+           const vector<vector<int> >& all_genotypes,
            int max_depth,
            int min_allele_count,
            double min_repeat_entropy,
            bool full_overlap,
            int max_node_size,
-           bool multiclass,
            bool expon,
            bool show_bases,
            bool assume_ref) {
@@ -558,12 +508,7 @@ HHGA::HHGA(size_t window_length,
         // require that it be in
         // 0/0, 0/1, 1/1, 0/2, 1/2, 2/2
         auto gt = var.samples[var.sampleNames.front()][gt_class].front();
-        if (!multiclass) {
-            label = label_for_genotype(gt);
-        } else {
-            // handles generic case with many alleles
-            label = multiclass_label_for_genotype(gt);
-        }
+        label = convert(label_for_genotype(gt, all_genotypes));
     } else {
         label = class_label;
     }
