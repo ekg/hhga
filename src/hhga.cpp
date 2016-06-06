@@ -1173,6 +1173,7 @@ HHGA::HHGA(size_t window_length,
     };
     
     // collect allele supports
+    int NONMATCH_ID = -1;
     for (auto& aln : alignments) {
         if (alignment_alleles.find(&aln) == alignment_alleles.end()) continue;
         if (full_overlap && missing_counts[&aln] > 0) continue;
@@ -1187,8 +1188,7 @@ HHGA::HHGA(size_t window_length,
             }
         } else {
             for (auto i : bests.rbegin()->second) {
-                // 8 is the magic "extra" namespace
-                allele_support[8][1-matches[&aln][i]].push_back(&aln);
+                allele_support[NONMATCH_ID][1-matches[&aln][i]].push_back(&aln);
             }
         }
     }
@@ -1219,7 +1219,6 @@ HHGA::HHGA(size_t window_length,
         softclipped.erase(softclipped.begin() + max_depth, softclipped.end());
     }
 
-    int NONMATCH_ID = -1;
     // organize the ordered alignments
     for (auto& supp : allele_support) {
         int i = 0;
@@ -1231,15 +1230,15 @@ HHGA::HHGA(size_t window_length,
                 stringstream ss;
                 // we limit ourselves to only 7 alleles, 1 softclip (=9) and 1 degenerate (OB=8)
                 if (unitigs.count(aln)) {
-                    ss << min(supp.first, NONMATCH_ID) << "u" << u++;
+                    ss << supp.first << "u" << u++;
                     if (max_depth && u+i > max_depth) break;
                 } else {
                     if (aln->IsReverseStrand()) {
                         if (max_depth && i >= max_depth) continue;
-                        ss << min(supp.first, NONMATCH_ID) << "-" << i++;
+                        ss << supp.first << "-" << i++;
                     } else {
                         if (max_depth && j >= max_depth) continue;
-                        ss << min(supp.first, NONMATCH_ID) << "+" << j++;
+                        ss << supp.first << "+" << j++;
                     }
                 }
                 alignment_groups[aln].push_back(ss.str());
@@ -1448,15 +1447,32 @@ const string HHGA::str(void) {
         out << " " << aln->Name;
         out << endl;
     };
+
+    // do the alignment and unitig namespaces
+    // for human-readable output, sort so that we have the non-special namespaces first
     
     for (auto g : grouped_normal_alignments) {
         auto& name = g.first;
+        if (name.at(0) == '-') continue;
+        auto& aln = g.second;
+        do_alignment(aln, name, "aln   ");
+    }
+    for (auto g : grouped_normal_alignments) {
+        auto& name = g.first;
+        if (name.at(0) != '-') continue;
         auto& aln = g.second;
         do_alignment(aln, name, "aln   ");
     }
 
     for (auto g : grouped_unitig_alignments) {
         auto& name = g.first;
+        if (name.at(0) == '-') continue;
+        auto& aln = g.second;
+        do_alignment(aln, name, "unitig");
+    }
+    for (auto g : grouped_unitig_alignments) {
+        auto& name = g.first;
+        if (name.at(0) != '-') continue;
         auto& aln = g.second;
         do_alignment(aln, name, "unitig");
     }
