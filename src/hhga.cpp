@@ -523,7 +523,6 @@ HHGA::HHGA(size_t window_length,
         ++i;
     }
 
-
     int32_t begin_pos = var.position-1 - window_length/2;
     int32_t end_pos = begin_pos + window_length;
     string seq_name = var.sequenceName;

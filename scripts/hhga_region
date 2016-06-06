@@ -125,8 +125,8 @@ tabix -h $ground_truth $region \
     | vcfallelicprimitives -kg \
     | vt normalize -r $ref -q - 2>/dev/null \
     | vcfgeno2haplo -r $ref -w 0 \
-    | vcffixup - \
     | vcfcreatemulti \
+    | vcffixup - \
     | vcfunphase - \
     | vcfnull2ref - \
     | bgziptabix $ground_region
@@ -135,8 +135,8 @@ tabix -h $variant_calls $region \
     | vcfallelicprimitives -kg \
     | vt normalize -r $ref -q - 2>/dev/null \
     | vcfgeno2haplo -r $ref -w 0 \
-    | vcffixup - \
     | vcfcreatemulti \
+    | vcffixup - \
     | vcfunphase - \
     | vcfnull2ref - \
     | vcfstreamsort -w 100000 | bgziptabix $normalized_variants
