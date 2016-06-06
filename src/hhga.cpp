@@ -1219,6 +1219,7 @@ HHGA::HHGA(size_t window_length,
         softclipped.erase(softclipped.begin() + max_depth, softclipped.end());
     }
 
+    int NONMATCH_ID = -1;
     // organize the ordered alignments
     for (auto& supp : allele_support) {
         int i = 0;
@@ -1230,15 +1231,15 @@ HHGA::HHGA(size_t window_length,
                 stringstream ss;
                 // we limit ourselves to only 7 alleles, 1 softclip (=9) and 1 degenerate (OB=8)
                 if (unitigs.count(aln)) {
-                    ss << min(supp.first, 8) << "u" << u++;
+                    ss << min(supp.first, NONMATCH_ID) << "u" << u++;
                     if (max_depth && u+i > max_depth) break;
                 } else {
                     if (aln->IsReverseStrand()) {
                         if (max_depth && i >= max_depth) continue;
-                        ss << min(supp.first, 8) << "-" << i++;
+                        ss << min(supp.first, NONMATCH_ID) << "-" << i++;
                     } else {
                         if (max_depth && j >= max_depth) continue;
-                        ss << min(supp.first, 8) << "+" << j++;
+                        ss << min(supp.first, NONMATCH_ID) << "+" << j++;
                     }
                 }
                 alignment_groups[aln].push_back(ss.str());
@@ -1251,6 +1252,7 @@ HHGA::HHGA(size_t window_length,
         }
     }
 
+    int SOFTCLIP_ID = -2;
     // and the soft clips
     {
         int i = 0; // forward strand
@@ -1260,12 +1262,12 @@ HHGA::HHGA(size_t window_length,
             stringstream ss;
             // we keep soft clips in the special namespace 9
             if (unitigs.count(aln)) {
-                ss << 9 << "u" << u++;
+                ss << SOFTCLIP_ID << "u" << u++;
             } else {
                 if (aln->IsReverseStrand()) {
-                    ss << 9 << "-" << i++;
+                    ss << SOFTCLIP_ID << "-" << i++;
                 } else {
-                    ss << 9 << "+" << j++;
+                    ss << SOFTCLIP_ID << "+" << j++;
                 }
             }
             alignment_groups[aln].push_back(ss.str());
