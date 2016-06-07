@@ -179,6 +179,5 @@ then
     rm -f $uncallable_variants*
     rm -f $labeled_variants*
     rm -f $processed_bam*
-    rm -f $processed_unitigs*
 fi
 
