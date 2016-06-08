@@ -169,15 +169,22 @@ hhga -f $ref -r $region \
      -E $min_entropy \
      $(if [[ "$full_overlap" != false ]]; then echo --full-overlap; fi) \
      $(if [[ "$input_unitigs" != false ]]; then echo -u $input_unitigs; fi) \
-    | gzip >$hhga_genotypes
+    | s/nan/0/g | gzip >$hhga_genotypes
 
 if [ $debug == false ];
 then
-    rm -f $ground_region*
-    rm -f $normalized_variants*
-    rm -f $callable_variants*
-    rm -f $uncallable_variants*
-    rm -f $labeled_variants*
-    rm -f $processed_bam*
+    rm -f $ground_region
+    rm -f $ground_region.tbi
+    rm -f $normalized_variants
+    rm -f $normalized_variants.tbi
+    rm -f $callable_variants
+    rm -f $callable_variants.tbi
+    rm -f $uncallable_variants
+    rm -f $uncallable_variants.tbi
+    rm -f $labeled_variants
+    rm -f $labeled_variants.tbi
+    rm -f $processed_bam
+    rm -f $processed_bam.tmp
+    rm -f $processed_bam.bai
 fi
 
