@@ -169,7 +169,7 @@ hhga -f $ref -r $region \
      -E $min_entropy \
      $(if [[ "$full_overlap" != false ]]; then echo --full-overlap; fi) \
      $(if [[ "$input_unitigs" != false ]]; then echo -u $input_unitigs; fi) \
-    | s/nan/0/g | gzip >$hhga_genotypes
+    | sed s/nan/0/g | gzip >$hhga_genotypes
 
 if [ $debug == false ];
 then
