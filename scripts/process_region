@@ -1,0 +1,33 @@
+#!/bin/bash
+
+region=$1
+name=$2
+ref=$3
+fermikitvcf=$4
+bam=$5
+unitigs=$6
+truth=$7
+callable=$8
+
+mkdir -p $name
+
+freebayes -f $ref --region $region --no-partial-observations --min-repeat-entropy 1 -C 2 -F 0.05 $bam \
+    | vcffilter -f 'QUAL > 1e-8' \
+    | bgziptabix $name/$region.freebayes.vcf.gz
+
+platypus --refFile $ref --bamFiles $bam --region $region --output $name/$region.platypus.vcf
+cat $name/$region.platypus.vcf | bgziptabix $name/$region.platypus.vcf.gz
+rm -f $name/$region.platypus.vcf
+
+tabix -h $fermikitvcf $region \
+    | bgziptabix $name/$region.fermikit.vcf.gz
+
+vcfjoincalls $ref $name/$region.freebayes.vcf.gz $name/$region.fermikit.vcf.gz fermikit $name \
+    | bgziptabix $name/$region.freebayes+fermikit.vcf.gz
+
+vcfjoincalls $ref $name/$region.freebayes+fermikit.vcf.gz $name/$region.platypus.vcf.gz platypus $name \
+    | bgziptabix $name/$region.union.vcf.gz
+
+hhga_region -r $region -w 32 -W 128 -x 20 -C 3 -E 0.1 -f $ref \
+    -T $truth -B $callable \
+    -b $bam -u $unitigs -v $name/$region.union.vcf.gz -o $name -S NA12878
