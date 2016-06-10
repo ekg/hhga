@@ -190,7 +190,7 @@ string genotype_for_label(int label, const vector<vector<int> >& genotypes) {
         cerr << "warning: unknown label '" << label << "'" << endl;
         return "./.";        
     } else {
-        return string_for_genotype(genotypes.at(label));
+        return string_for_genotype(genotypes.at(label-1));
     }
 }
 
