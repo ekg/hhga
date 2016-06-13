@@ -16,7 +16,7 @@ freebayes -f $ref --region $region --no-partial-observations --min-repeat-entrop
     | bgziptabix $name/$region.freebayes.vcf.gz
 
 platypus --refFile $ref --bamFiles $bam --region $region \
-         --assemble 1 --output $name/$region.platypus.vcf
+         --output $name/$region.platypus.vcf
 cat $name/$region.platypus.vcf | bgziptabix $name/$region.platypus.vcf.gz
 rm -f $name/$region.platypus.vcf
 
