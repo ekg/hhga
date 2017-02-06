@@ -555,18 +555,15 @@ HHGA::HHGA(size_t window_length,
     auto graph_end_pos = var.position-1 + var.ref.size() + graph_window/2;
     targetss << seq_name << ":" << graph_begin_pos << "-" << graph_end_pos;
     auto target = targetss.str();
-    set<string> allowed_variants;
-    //cerr << target << " " << var.vrepr() << endl;
-    allowed_variants.insert(var.vrepr());
-    graph = vg::VG(graph_vcf,
-                   fasta_ref,
-                   target,
-                   false,
-                   1000,
-                   0,
-                   true, // don't manipulate the VCF records
-                   false, false, false,
-                   &allowed_variants);
+    //ConstructedChunk construct_chunk(string reference_sequence, string reference_path_name,
+    //vector<vcflib::Variant> variants, size_t chunk_offset) const;
+    vector<vcflib::Variant> vars = { var };
+    vg::Constructor constructor;
+    constructor.flat = true;
+    string graph_ref_seq = fasta_ref.getSubSequence(seq_name, graph_begin_pos, graph_window);
+    vg::ConstructedChunk chunk = constructor.construct_chunk(graph_ref_seq, var.sequenceName,
+                                                             vars, graph_begin_pos);
+    vg::VG graph; graph.merge(chunk.graph);
     if (max_node_size > 0) {
         graph.dice_nodes(max_node_size); // force nodes to be 1bp
     }

@@ -15,6 +15,7 @@
 #include <cmath>
 #include <iomanip>
 #include "vg.hpp"
+#include "constructor.hpp"
 #include "multichoose.h"
 #include "join.h"
 
