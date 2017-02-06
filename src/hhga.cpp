@@ -562,7 +562,7 @@ HHGA::HHGA(size_t window_length,
     constructor.flat = true;
     string graph_ref_seq = fasta_ref.getSubSequence(seq_name, graph_begin_pos, graph_window);
     vg::ConstructedChunk chunk = constructor.construct_chunk(graph_ref_seq, var.sequenceName,
-                                                             vars, graph_begin_pos);
+                                                             vars, graph_begin_pos+1);
     vg::VG graph; graph.merge(chunk.graph);
     if (max_node_size > 0) {
         graph.dice_nodes(max_node_size); // force nodes to be 1bp
