@@ -153,8 +153,8 @@ zcat $callable_variants \
 
 samtools view -b $input_bam $region \
     | glia -Rru -w 1500 -S 200 -Q 200 -G 4 -f $ref -v $normalized_variants \
-    | bamleftalign -f $ref \
-    | samtools sort $processed_bam.tmp >$processed_bam
+    | bamleftalign -f $ref >
+    | samtools sort - >$processed_bam
 samtools index $processed_bam
 
 hhga -f $ref -r $region \
