@@ -790,6 +790,9 @@ HHGA::HHGA(size_t window_length,
             case 'H':
                 // clipped sequence not present in the read
                 break;
+            case 'N':
+                // undefined operation
+                break;
             default:
                 cerr << "do not recognize cigar element " << t <<":"<< len << endl;
                 break;
