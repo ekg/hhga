@@ -121,7 +121,7 @@ then
 fi
 
 tabix -h $ground_truth $region \
-    | vcfintersect -b <(zcat $ground_callable) \
+    | vcfintersect -b $ground_callable \
     | vcfallelicprimitives -kg \
     | vt normalize -r $ref -q - 2>/dev/null \
     | vcfgeno2haplo -r $ref -w 0 \
@@ -141,8 +141,8 @@ tabix -h $variant_calls $region \
     | vcfnull2ref - \
     | vcfstreamsort -w 100000 | bgziptabix $normalized_variants
 
-vcfintersect -b <(zcat $ground_callable) $normalized_variants | bgziptabix $callable_variants
-vcfintersect -v -b <(zcat $ground_callable) $normalized_variants | bgziptabix $uncallable_variants
+vcfintersect -b $ground_callable $normalized_variants | bgziptabix $callable_variants
+vcfintersect -v -b $ground_callable $normalized_variants | bgziptabix $uncallable_variants
 
 zcat $callable_variants \
     | vcfannotategenotypes GT - $ground_region \
