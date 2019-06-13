@@ -16,6 +16,3 @@
 [submodule "deps/bash-tap"]
 	path = deps/bash-tap
 	url = https://github.com/illusori/bash-tap.git
-[submodule "deps/vg"]
-	path = deps/vg
-	url = https://github.com/vgteam/vg.git
