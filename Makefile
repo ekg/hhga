@@ -96,7 +96,7 @@ $(LIB_DIR)/libbamtools.a:
 ####################################
 
 $(OBJ_DIR)/hhga.o: $(SRC_DIR)/hhga.cpp $(SRC_DIR)/hhga.hpp deps
-	+. ./source_me.sh && $(CXX) $(CXXFLAGS) -c -o $@ $< $(LD_INCLUDE_FLAGS) $(LD_LIB_FLAGS)
+	+. ./source_me.sh && $(CXX) $(CXXFLAGS) -c -o $@ $< $(LD_INCLUDE_FLAGS)
 
 $(OBJ_DIR)/main.o: $(SRC_DIR)/main.cpp $(SRC_DIR)/hhga.hpp deps
 	+. ./source_me.sh && $(CXX) $(CXXFLAGS) -c -o $@ $< $(LD_INCLUDE_FLAGS) $(LD_LIB_FLAGS)
