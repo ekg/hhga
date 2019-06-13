@@ -13,8 +13,15 @@ CXXFLAGS:=-O3 -msse4.1 -fopenmp -std=c++11 -ggdb
 
 CWD:=$(shell pwd)
 
+STATIC_FLAGS=-static -static-libstdc++ -static-libgcc -Wl,--allow-multiple-definition
+
 LD_INCLUDE_FLAGS:=-I$(CWD)/$(INC_DIR) -I. -I$(CWD)/$(SRC_DIR) -I$(CWD)/$(CPP_DIR) -I$(CWD)/$(INC_DIR)/bamtools -I$(CWD)/$(INC_DIR)/gcsa
-LD_LIB_FLAGS:= -ggdb -L$(CWD)/$(LIB_DIR) -lvg -lvcflib -lgssw -lssw -lprotobuf -lhts -lpthread -ljansson -lncurses -lgcsa2 -lxg -ldivsufsort -ldivsufsort64 -lvcfh -lgfakluge -lraptor2 -lsupbub -lsdsl -lpinchesandcacti -l3edgeconnected -lsonlib -lhts -lbamtools -lpthread -lz -lm -lbz2
+#LD_LIB_FLAGS:= -ggdb -L$(CWD)/$(LIB_DIR) -lvg -lvcflib -lgssw -lssw -lprotobuf -lhts -lpthread -ljansson -lncurses -lgcsa2 -ldivsufsort -ldivsufsort64 -lvcfh -lgfakluge -lraptor2 -lsdsl -lpinchesandcacti -l3edgeconnected -lsonlib -lhts -lbamtools -lpthread -lz -lm -lbz2 -llzma
+
+LD_LIB_FLAGS:= -L$(CWD)/$(LIB_DIR) $(CWD)/$(LIB_DIR)/libvgio.a -lhandlegraph -lvcflib -lgssw -lssw $(CWD)/$(LIB_DIR)/libprotobuf.a -lsublinearLS $(CWD)/$(LIB_DIR)/libhts.a $(CWD)/$(LIB_DIR)/libdeflate.a -lpthread -ljansson -lncurses  -lbamtools -lvg -lvgio -lhandlegraph -lgcsa2 -lgbwt -ldivsufsort -ldivsufsort64 -lvcfh -lgfakluge -lraptor2 -lsdsl -lpinchesandcacti -l3edgeconnected -lsonlib -lfml -llz4 -lstructures -lvw -lboost_program_options -lallreduce -llzma -lbz2 -lprotobuf -lssw -lgssw
+# Use pkg-config to find Cairo and all the libs it uses
+LD_LIB_FLAGS += $(shell pkg-config --libs --static cairo jansson)
+
 
 RAPTOR_INCLUDE:=/usr/include/
 ifeq ($(shell uname -s),Darwin)
@@ -65,7 +72,7 @@ test: $(BIN_DIR)/hhga
 deps: $(LIB_DIR)/libvg.a $(LIB_DIR)/libvcflib.a $(LIB_DIR)/libhts.a $(LIB_DIR)/libbamtools.a $(OBJ_DIR)/Fasta.o $(CPP_DIR)/vg.pb.h
 
 $(CPP_DIR)/vg.pb.h: $(LIB_DIR)/libvg.a
-	+cp $(VGLIB_DIR)/cpp/vg.pb.cc $(VGLIB_DIR)/cpp/vg.pb.h $(CPP_DIR)/
+	+cp $(VGLIB_DIR)/deps/libvgio/vg.pb.cc $(VGLIB_DIR)/deps/libvgio/vg.pb.h $(CPP_DIR)/
 
 $(OBJ_DIR)/Fasta.o: .pre-build
 	+cd $(FASTAHACK_DIR) && make && mv Fasta.o $(CWD)/$(OBJ_DIR) && cp Fasta.h $(CWD)/$(INC_DIR)
@@ -77,11 +84,11 @@ $(LIB_DIR)/libvcflib.a: .pre-build
 	+. ./source_me.sh && cd $(VCFLIB_DIR) && $(MAKE) libvcflib.a && cp lib/* $(CWD)/$(LIB_DIR)/ && cp include/* $(CWD)/$(INC_DIR)/ && cp src/*.h* $(CWD)/$(INC_DIR)/
 
 $(LIB_DIR)/libvg.a: .pre-build
-	+cd $(VGLIB_DIR) && . ./source_me.sh && $(MAKE) && cp lib/*.a $(CWD)/$(LIB_DIR)/ && cp -r include/* $(CWD)/$(INC_DIR)/ && cp src/*.h* $(CWD)/$(INC_DIR)/
+	+cd $(VGLIB_DIR) && . ./source_me.sh && $(MAKE) && cp lib/*.a $(CWD)/$(LIB_DIR)/ && cp -r include/* $(CWD)/$(INC_DIR)/ && cp -r src/*hpp $(CWD)/$(INC_DIR)/ && cp -r src/algorithms $(CWD)/$(INC_DIR)/ && cp src/*.h* $(CWD)/$(INC_DIR)/
 
 # builds bamtools static lib, and copies into root
 $(LIB_DIR)/libbamtools.a:
-	+cd $(BAMTOOLS_DIR) && mkdir -p build && cd build && cmake .. && make && cp ../lib/libbamtools.a $(CWD)/$(LIB_DIR) && cp -r ../src $(CWD)/$(INC_DIR)/bamtools
+	+cd $(BAMTOOLS_DIR) && mkdir -p build && cd build && cmake .. && make BamTools-static/fast && cp ../lib/libbamtools.a $(CWD)/$(LIB_DIR) && cp -r ../src $(CWD)/$(INC_DIR)/bamtools
 
 
 ###################################
