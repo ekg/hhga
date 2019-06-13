@@ -560,9 +560,10 @@ HHGA::HHGA(size_t window_length,
     vector<vcflib::Variant> vars = { var };
     vg::Constructor constructor;
     constructor.flat = true;
+    constructor.trim_indels = false;
     string graph_ref_seq = fasta_ref.getSubSequence(seq_name, graph_begin_pos, graph_end_pos-graph_begin_pos);
     vg::ConstructedChunk chunk = constructor.construct_chunk(graph_ref_seq, var.sequenceName,
-                                                             vars, graph_begin_pos+1);
+                                                             vars, graph_begin_pos);
     vg::VG graph; graph.merge(chunk.graph);
     if (max_node_size > 0) {
         graph.dice_nodes(max_node_size); // force nodes to be 1bp
