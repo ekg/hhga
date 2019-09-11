@@ -1,5 +1,7 @@
 # HHGA
 
+[![Join the chat at https://gitter.im/ekg/hhga](https://badges.gitter.im/ekg/hhga.svg)](https://gitter.im/ekg/hhga?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ![orb](https://raw.githubusercontent.com/ekg/hhga/master/images/orb.jpg)
 
 ## Have Haplotypes Genotypes Alleles
